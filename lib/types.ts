@@ -62,6 +62,18 @@ export interface Task {
   assigneeName?: string;
 }
 
+export interface Payment {
+  id: string;
+  name: string;
+  description?: string;
+  cost: number;
+  paidById?: string;
+  paidByName?: string;
+  attachmentPath?: string;
+  attachmentUrl?: string;
+  createdAt: string;
+}
+
 export interface Trip {
   id: string;
   name: string;
@@ -76,4 +88,5 @@ export interface Trip {
   plans: Plan[];
   tickets: Ticket[];
   tasks: Task[];
+  payments: Payment[];
 }

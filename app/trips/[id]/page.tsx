@@ -34,11 +34,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const nights = Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / 86400000);
 
   const sections = [
-    { href: `/trips/${id}/chat`,         label: t('chat'),         count: null,                    icon: '💬' },
-    { href: `/trips/${id}/tasks`,        label: t('tasks'),        count: trip.tasks.length,       icon: '✅' },
-    { href: `/trips/${id}/plans`,        label: t('plans'),        count: trip.plans.length,       icon: '🗓️' },
-    { href: `/trips/${id}/photos`,       label: t('photos'),       count: trip.photos.length,      icon: '📷' },
+    { href: `/trips/${id}/chat`,         label: t('chat'),         count: null,                     icon: '💬' },
+    { href: `/trips/${id}/tasks`,        label: t('tasks'),        count: trip.tasks.length,        icon: '✅' },
+    { href: `/trips/${id}/plans`,        label: t('plans'),        count: trip.plans.length,        icon: '🗓️' },
+    { href: `/trips/${id}/photos`,       label: t('photos'),       count: trip.photos.length,       icon: '📷' },
     { href: `/trips/${id}/participants`, label: t('people'),       count: trip.participants.length, icon: '👥' },
+    { href: `/trips/${id}/payments`,     label: t('payments'),     count: trip.payments.length,     icon: '💳' },
   ];
 
   return (
@@ -64,7 +65,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         {/* Stats */}
-        <div className="grid grid-cols-5 gap-1.5 mt-4 mb-4">
+        <div className="grid grid-cols-3 gap-1.5 mt-4 mb-4">
           {sections.map((s) => (
             <Link key={s.href} href={s.href} className="bg-white rounded-xl border border-gray-100 p-2 flex flex-col items-center gap-0.5 hover:border-gray-200 transition-colors">
               <span className="text-lg">{s.icon}</span>

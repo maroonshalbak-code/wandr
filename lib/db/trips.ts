@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import { Trip, Participant, Photo, Plan, Ticket, TripStatus, Message, Task } from '@/lib/types';
+import { Trip, Participant, Photo, Plan, Ticket, TripStatus, Message, Task, Payment } from '@/lib/types';
 
 // ── helpers ──────────────────────────────────────────────────
 
@@ -18,6 +18,7 @@ function rowToTrip(row: Record<string, unknown>): Trip {
     plans: [],
     tickets: [],
     tasks: [],
+    payments: [],
   };
 }
 
@@ -79,6 +80,20 @@ function rowToTask(row: Record<string, unknown>): Task {
   };
 }
 
+function rowToPayment(row: Record<string, unknown>): Payment {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    description: (row.description as string) ?? undefined,
+    cost: Number(row.cost ?? 0),
+    paidById: (row.paid_by_id as string) ?? undefined,
+    paidByName: (row.paid_by_name as string) ?? undefined,
+    attachmentPath: (row.attachment_path as string) ?? undefined,
+    attachmentUrl: (row.attachment_url as string) ?? undefined,
+    createdAt: (row.created_at as string) ?? '',
+  };
+}
+
 function rowToTicket(row: Record<string, unknown>): Ticket {
   return {
     id: row.id as string,
@@ -135,6 +150,7 @@ export async function fetchTrips(): Promise<Trip[]> {
       supabase.from('tickets').select('*').in('trip_id', tripIds).order('date'),
     ]);
   const { data: tasks } = await supabase.from('tasks').select('*').in('trip_id', tripIds).order('created_at');
+  const { data: payments } = await supabase.from('payments').select('*').in('trip_id', tripIds).order('created_at');
 
   return trips.map((t) => ({
     ...rowToTrip(t as Record<string, unknown>),
@@ -143,10 +159,11 @@ export async function fetchTrips(): Promise<Trip[]> {
     plans: (plans ?? []).filter((p) => p.trip_id === t.id).map((p) => rowToPlan(p as Record<string, unknown>)),
     tickets: (tickets ?? []).filter((p) => p.trip_id === t.id).map((p) => rowToTicket(p as Record<string, unknown>)),
     tasks: (tasks ?? []).filter((p) => p.trip_id === t.id).map((p) => rowToTask(p as Record<string, unknown>)),
+    payments: (payments ?? []).filter((p) => p.trip_id === t.id).map((p) => rowToPayment(p as Record<string, unknown>)),
   }));
 }
 
-export async function insertTrip(data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets' | 'tasks'>): Promise<Trip> {
+export async function insertTrip(data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets' | 'tasks' | 'payments'>): Promise<Trip> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -182,7 +199,7 @@ export async function insertTrip(data: Omit<Trip, 'id' | 'participants' | 'photo
     role: 'organizer',
   });
 
-  return { ...rowToTrip(trip as Record<string, unknown>), participants: [], photos: [], plans: [], tickets: [], tasks: [] };
+  return { ...rowToTrip(trip as Record<string, unknown>), participants: [], photos: [], plans: [], tickets: [], tasks: [], payments: [] };
 }
 
 // ── Participants ───────────────────────────────────────────────
@@ -318,6 +335,55 @@ export async function updateTask(id: string, updates: Partial<Pick<Task, 'status
 export async function deleteTask(id: string) {
   const supabase = createClient();
   const { error } = await supabase.from('tasks').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── Payments ──────────────────────────────────────────────────
+
+export async function insertPayment(tripId: string, data: Omit<Payment, 'id' | 'createdAt'>, file?: File): Promise<Payment> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) throw new Error('Not authenticated');
+
+  let attachmentPath: string | undefined;
+  let attachmentUrl: string | undefined;
+
+  if (file) {
+    const ext = file.name.split('.').pop() ?? 'bin';
+    const path = `payment-attachments/${tripId}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('trip-photos').upload(path, file);
+    if (uploadError) throw uploadError;
+    const { data: urlData } = supabase.storage.from('trip-photos').getPublicUrl(path);
+    attachmentPath = path;
+    attachmentUrl = urlData.publicUrl;
+  }
+
+  const { data: row, error } = await supabase
+    .from('payments')
+    .insert({
+      trip_id: tripId,
+      name: data.name,
+      description: data.description ?? null,
+      cost: data.cost,
+      paid_by_id: data.paidById ?? null,
+      paid_by_name: data.paidByName ?? null,
+      attachment_path: attachmentPath ?? null,
+      attachment_url: attachmentUrl ?? null,
+      created_by: user.id,
+    })
+    .select().single();
+
+  if (error) throw error;
+  return rowToPayment(row as Record<string, unknown>);
+}
+
+export async function deletePayment(id: string, attachmentPath?: string) {
+  const supabase = createClient();
+  if (attachmentPath) {
+    await supabase.storage.from('trip-photos').remove([attachmentPath]);
+  }
+  const { error } = await supabase.from('payments').delete().eq('id', id);
   if (error) throw error;
 }
 

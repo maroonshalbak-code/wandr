@@ -40,6 +40,7 @@ export const mockTrips: Trip[] = [
       { id: 't3', type: 'flight', title: 'Return flight', from: 'NRT', to: 'DXB', date: '2026-08-22', time: '23:55', duration: '9h 45m', passengers: 4, status: 'pending', reference: 'NH206' },
     ],
     tasks: [],
+    payments: [],
   },
   {
     id: '2',
@@ -67,6 +68,7 @@ export const mockTrips: Trip[] = [
       { id: 't4', type: 'flight', title: 'Outbound flight', from: 'DXB', to: 'LIS', date: '2026-09-04', time: '02:00', duration: '7h', passengers: 2, status: 'confirmed', reference: 'TP1400' },
     ],
     tasks: [],
+    payments: [],
   },
   {
     id: '3',
@@ -95,5 +97,6 @@ export const mockTrips: Trip[] = [
       { id: 't5', type: 'flight', title: 'Outbound flight', from: 'DXB', to: 'NAP', date: '2026-05-02', time: '06:00', duration: '6h 30m', passengers: 3, status: 'confirmed', reference: 'EK095' },
     ],
     tasks: [],
+    payments: [],
   },
 ];
