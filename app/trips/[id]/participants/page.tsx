@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useCallback } from 'react';
 import { notFound } from 'next/navigation';
 import MobileShell from '@/components/MobileShell';
 import BackButton from '@/components/BackButton';
@@ -15,16 +15,7 @@ function getInitials(name: string) {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 }
 
-async function isRegisteredUser(email: string): Promise<boolean> {
-  if (!email.trim()) return false;
-  const supabase = createClient();
-  const { data } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('email', email.trim().toLowerCase())
-    .maybeSingle();
-  return !!data;
-}
+interface Profile { id: string; name: string; email: string }
 
 export default function ParticipantsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -32,14 +23,22 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
   const { t } = useLang();
   const trip = getTrip(id);
 
-  // All hooks before any early returns (Rules of Hooks)
+  // All hooks before early returns
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [adding, setAdding] = useState(false);
+  const [mode, setMode] = useState<'search' | 'invite'>('search');
+
+  // Search mode
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Profile[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Invite mode
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+
   const [inviteState, setInviteState] = useState<Record<string, 'sent'>>({});
 
-  // Early returns after all hooks
   if (loading) return (
     <MobileShell>
       <div className="flex-1 flex items-center justify-center">
@@ -49,35 +48,60 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
   );
   if (!trip) notFound();
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setAdding(true);
+  const existingEmails = new Set(trip.participants.map((p) => p.email?.toLowerCase()));
 
+  const searchProfiles = useCallback(async (q: string) => {
+    if (q.trim().length < 2) { setResults([]); return; }
+    setSearching(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
+      .limit(10);
+    // Filter out users already in the trip
+    setResults((data ?? []).filter((p: Profile) => !existingEmails.has(p.email?.toLowerCase())));
+    setSearching(false);
+  }, [existingEmails]);
+
+  const handleQueryChange = (q: string) => {
+    setQuery(q);
+    searchProfiles(q);
+  };
+
+  const addExistingUser = async (profile: Profile) => {
     const color = COLORS[trip.participants.length % COLORS.length];
-    const participantEmail = email.trim().toLowerCase();
-
-    const registered = participantEmail ? await isRegisteredUser(participantEmail) : false;
-
-    addParticipant(id, {
-      name: name.trim(),
-      email: participantEmail,
-      initials: getInitials(name),
+    await addParticipant(id, {
+      name: profile.name,
+      email: profile.email,
+      initials: getInitials(profile.name),
       color,
       role: 'member',
     });
+    setQuery(''); setResults([]); setShowForm(false);
+  };
 
-    if (participantEmail && !registered) {
-      const appUrl = window.location.origin;
-      const organizer = trip.participants[0]?.name ?? 'Someone';
-      const subject = encodeURIComponent(`You've been invited to join ${trip.name} on i-Travel`);
-      const body = encodeURIComponent(
-        `Hi ${name.trim()},\n\n${organizer} has invited you to join the trip "${trip.name}" on i-Travel.\n\nInstall the app here:\n${appUrl}\n\nSee you on the trip! ✈️`
-      );
-      window.open(`mailto:${participantEmail}?subject=${subject}&body=${body}`, '_blank');
-    }
-
-    setName(''); setEmail(''); setAdding(false); setShowForm(false);
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteName.trim() || !inviteEmail.trim()) return;
+    setInviting(true);
+    const color = COLORS[trip.participants.length % COLORS.length];
+    await addParticipant(id, {
+      name: inviteName.trim(),
+      email: inviteEmail.trim().toLowerCase(),
+      initials: getInitials(inviteName),
+      color,
+      role: 'member',
+    });
+    // Open email invite
+    const appUrl = window.location.origin;
+    const organizer = trip.participants[0]?.name ?? 'Someone';
+    const subject = encodeURIComponent(`You've been invited to join ${trip.name} on i-Travel`);
+    const body = encodeURIComponent(
+      `Hi ${inviteName.trim()},\n\n${organizer} has invited you to join the trip "${trip.name}" on i-Travel.\n\nInstall the app here:\n${appUrl}\n\nSee you on the trip! ✈️`
+    );
+    window.open(`mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`, '_blank');
+    setInviteName(''); setInviteEmail(''); setInviting(false); setShowForm(false);
   };
 
   const sendInvite = (p: { id: string; name: string; email: string }) => {
@@ -91,6 +115,12 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
     setInviteState((prev) => ({ ...prev, [p.id]: 'sent' }));
   };
 
+  const closeForm = () => {
+    setShowForm(false); setMode('search');
+    setQuery(''); setResults([]);
+    setInviteName(''); setInviteEmail('');
+  };
+
   return (
     <MobileShell>
       <div className="flex items-center gap-3 px-5 pt-2 pb-3 flex-shrink-0">
@@ -99,7 +129,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
         <button
           onClick={() => setShowForm((v) => !v)}
           className="w-9 h-9 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100"
-          aria-label="Invite person"
+          aria-label="Add participant"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z"/>
@@ -108,23 +138,104 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-6">
+
+        {/* Add participant panel */}
         {showForm && (
-          <form onSubmit={handleAdd} className="bg-blue-50 rounded-2xl p-4 mb-4 flex flex-col gap-3">
-            <p className="text-sm font-semibold text-blue-900">{t('inviteSomeone')}</p>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name"
-              className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" required />
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com"
-              className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
-            <p className="text-[11px] text-gray-400">If they don't have an account yet, we'll open an email invite for you to send.</p>
-            <div className="flex gap-2">
-              <button type="submit" disabled={adding} className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-60">
-                {adding ? '…' : t('add')}
+          <div className="bg-blue-50 rounded-2xl p-4 mb-4">
+            {/* Mode tabs */}
+            <div className="flex bg-white rounded-xl p-1 mb-4 gap-1">
+              <button
+                onClick={() => setMode('search')}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${mode === 'search' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                🔍 Search users
               </button>
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
-                {t('cancel')}
+              <button
+                onClick={() => setMode('invite')}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${mode === 'invite' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                ✉️ Invite new
               </button>
             </div>
-          </form>
+
+            {/* Search mode */}
+            {mode === 'search' && (
+              <div className="flex flex-col gap-3">
+                <input
+                  type="text" value={query} onChange={(e) => handleQueryChange(e.target.value)}
+                  placeholder="Search by name or email…"
+                  autoFocus
+                  className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                />
+                {searching && (
+                  <div className="flex items-center justify-center py-3">
+                    <div className="w-4 h-4 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+                  </div>
+                )}
+                {!searching && query.length >= 2 && results.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-2">
+                    No users found.{' '}
+                    <button onClick={() => setMode('invite')} className="text-blue-500 underline">Invite them instead</button>
+                  </p>
+                )}
+                {results.length > 0 && (
+                  <div className="bg-white rounded-xl border border-blue-100 divide-y divide-gray-50 overflow-hidden">
+                    {results.map((profile) => (
+                      <button
+                        key={profile.id}
+                        onClick={() => addExistingUser(profile)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition-colors text-left"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 flex-shrink-0">
+                          {getInitials(profile.name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">{profile.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{profile.email}</p>
+                        </div>
+                        <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {query.length < 2 && (
+                  <p className="text-xs text-gray-400 text-center">Type at least 2 characters to search</p>
+                )}
+                <button onClick={closeForm} className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
+                  {t('cancel')}
+                </button>
+              </div>
+            )}
+
+            {/* Invite new user mode */}
+            {mode === 'invite' && (
+              <form onSubmit={handleInvite} className="flex flex-col gap-3">
+                <input
+                  type="text" value={inviteName} onChange={(e) => setInviteName(e.target.value)}
+                  placeholder="Full name" required autoFocus
+                  className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                />
+                <input
+                  type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="email@example.com" required
+                  className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                />
+                <p className="text-[11px] text-gray-400">We'll add them to the trip and open an email invite for you to send.</p>
+                <div className="flex gap-2">
+                  <button type="submit" disabled={inviting}
+                    className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-60">
+                    {inviting ? '…' : 'Add & Invite'}
+                  </button>
+                  <button type="button" onClick={closeForm}
+                    className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
+                    {t('cancel')}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         )}
 
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">{trip.participants.length} people</p>
@@ -158,7 +269,6 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
           ))}
-
           {trip.participants.length === 0 && (
             <div className="p-6 text-center text-sm text-gray-400">{t('noParticipants')}</div>
           )}
