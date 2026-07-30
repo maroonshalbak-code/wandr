@@ -202,6 +202,12 @@ export async function insertTrip(data: Omit<Trip, 'id' | 'participants' | 'photo
   return { ...rowToTrip(trip as Record<string, unknown>), participants: [], photos: [], plans: [], tickets: [], tasks: [], payments: [] };
 }
 
+export async function deleteTrip(id: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from('trips').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ── Participants ───────────────────────────────────────────────
 
 export async function insertParticipant(tripId: string, data: Omit<Participant, 'id'>) {

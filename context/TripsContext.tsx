@@ -11,6 +11,7 @@ interface TripsContextValue {
   reload: () => Promise<void>;
   getTrip: (id: string) => Trip | undefined;
   addTrip: (data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets' | 'tasks' | 'payments'>) => Promise<Trip>;
+  removeTrip: (tripId: string) => Promise<void>;
   addParticipant: (tripId: string, data: Omit<Participant, 'id'>) => Promise<void>;
   removeParticipant: (tripId: string, participantId: string) => Promise<void>;
   addPhoto: (tripId: string, data: Omit<Photo, 'id'> & { storagePath?: string }) => Promise<void>;
@@ -58,6 +59,11 @@ export function TripsProvider({ children }: { children: ReactNode }) {
     const trip = await db.insertTrip(data);
     setTrips((prev) => [trip, ...prev]);
     return trip;
+  };
+
+  const removeTrip = async (tripId: string) => {
+    await db.deleteTrip(tripId);
+    setTrips((prev) => prev.filter((t) => t.id !== tripId));
   };
 
   const addParticipant = async (tripId: string, data: Omit<Participant, 'id'>) => {
@@ -133,7 +139,7 @@ export function TripsProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <TripsContext.Provider value={{ trips, loading, error, reload, getTrip, addTrip, addParticipant, removeParticipant, addPhoto, removePhoto, addPlan, removePlan, addTicket, removeTicket, addTask, updateTask, removeTask, addPayment, removePayment }}>
+    <TripsContext.Provider value={{ trips, loading, error, reload, getTrip, addTrip, removeTrip, addParticipant, removeParticipant, addPhoto, removePhoto, addPlan, removePlan, addTicket, removeTicket, addTask, updateTask, removeTask, addPayment, removePayment }}>
       {children}
     </TripsContext.Provider>
   );

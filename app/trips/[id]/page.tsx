@@ -1,7 +1,8 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { notFound } from 'next/navigation';
 import MobileShell from '@/components/MobileShell';
 import BackButton from '@/components/BackButton';
@@ -19,9 +20,15 @@ const planTypeColors: Record<string, string> = {
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTrip, loading } = useTrips();
+  const router = useRouter();
+  const { getTrip, loading, removeTrip } = useTrips();
   const { t } = useLang();
   const trip = getTrip(id);
+
+  // All hooks before early returns
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   if (loading) return (
     <MobileShell>
       <div className="flex-1 flex items-center justify-center">
@@ -32,6 +39,17 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   if (!trip) notFound();
 
   const nights = Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / 86400000);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await removeTrip(id);
+      router.push('/');
+    } catch {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   const sections = [
     { href: `/trips/${id}/chat`,         label: t('chat'),         count: null,                     icon: '💬' },
@@ -58,13 +76,22 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         <div className="absolute top-3 left-4">
           <BackButton href="/" label="" />
         </div>
-        <div className="absolute top-3 right-4">
+        <div className="absolute top-3 right-4 flex items-center gap-2">
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-8 h-8 rounded-xl bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/80 hover:bg-black/40 hover:text-white transition-colors"
+            aria-label="Delete trip"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+            </svg>
+          </button>
           <Badge status={trip.status} />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {/* Stats */}
+        {/* Quick-nav grid */}
         <div className="grid grid-cols-3 gap-1.5 mt-4 mb-4">
           {sections.map((s) => (
             <Link key={s.href} href={s.href} className="bg-white rounded-xl border border-gray-100 p-2 flex flex-col items-center gap-0.5 hover:border-gray-200 transition-colors">
@@ -156,6 +183,42 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 bg-black/50 flex items-end z-50" onClick={() => !deleting && setShowDeleteConfirm(false)}>
+          <div className="w-full bg-white rounded-t-3xl p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Delete &ldquo;{trip.name}&rdquo;?</p>
+                <p className="text-xs text-gray-400 mt-0.5">All photos, plans, tasks, and payments will be permanently deleted.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 disabled:opacity-60"
+              >
+                {deleting ? 'Deleting…' : 'Delete trip'}
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }
