@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useCallback } from 'react';
+import { use, useState } from 'react';
 import { notFound } from 'next/navigation';
 import MobileShell from '@/components/MobileShell';
 import BackButton from '@/components/BackButton';
@@ -50,7 +50,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
 
   const existingEmails = new Set(trip.participants.map((p) => p.email?.toLowerCase()));
 
-  const searchProfiles = useCallback(async (q: string) => {
+  const searchProfiles = async (q: string) => {
     if (q.trim().length < 2) { setResults([]); return; }
     setSearching(true);
     const supabase = createClient();
@@ -59,10 +59,9 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
       .select('id, name, email')
       .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
       .limit(10);
-    // Filter out users already in the trip
     setResults((data ?? []).filter((p: Profile) => !existingEmails.has(p.email?.toLowerCase())));
     setSearching(false);
-  }, [existingEmails]);
+  };
 
   const handleQueryChange = (q: string) => {
     setQuery(q);
