@@ -125,15 +125,16 @@ export async function fetchTrips(): Promise<Trip[]> {
 
   const tripIds = trips.map((t) => t.id as string);
 
-  // Fetch all related data in parallel
-  const [{ data: participants }, { data: photos }, { data: plans }, { data: tickets }, { data: tasks }] =
+  // Fetch all related data in parallel.
+  // tasks is fetched separately so a missing tasks table never kills the whole load.
+  const [{ data: participants }, { data: photos }, { data: plans }, { data: tickets }] =
     await Promise.all([
       supabase.from('participants').select('*').in('trip_id', tripIds),
       supabase.from('photos').select('*').in('trip_id', tripIds).order('uploaded_at', { ascending: false }),
       supabase.from('plans').select('*').in('trip_id', tripIds).order('date').order('time'),
       supabase.from('tickets').select('*').in('trip_id', tripIds).order('date'),
-      supabase.from('tasks').select('*').in('trip_id', tripIds).order('created_at'),
     ]);
+  const { data: tasks } = await supabase.from('tasks').select('*').in('trip_id', tripIds).order('created_at');
 
   return trips.map((t) => ({
     ...rowToTrip(t as Record<string, unknown>),
