@@ -3,6 +3,7 @@ import { Geist } from 'next/font/google';
 import './globals.css';
 import { TripsProvider } from '@/context/TripsContext';
 import { LanguageProvider } from '@/context/LanguageContext';
+import RegisterSW from '@/components/RegisterSW';
 
 const geist = Geist({ subsets: ['latin'] });
 
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${geist.className} bg-gray-100 min-h-screen`}>
+        <RegisterSW />
         <LanguageProvider>
           <TripsProvider>{children}</TripsProvider>
         </LanguageProvider>
