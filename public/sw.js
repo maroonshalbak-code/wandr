@@ -1,4 +1,4 @@
-const CACHE = 'wandr-v1';
+const CACHE = 'itravel-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

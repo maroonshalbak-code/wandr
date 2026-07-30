@@ -18,7 +18,7 @@ export default function InstallBanner() {
     if (window.matchMedia('(display-mode: standalone)').matches) return;
 
     // Check if dismissed before
-    if (localStorage.getItem('wandr-install-dismissed')) return;
+    if (localStorage.getItem('itravel-install-dismissed')) return;
 
     // iOS detection
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as unknown as { MSStream: unknown }).MSStream;
@@ -44,7 +44,7 @@ export default function InstallBanner() {
   const handleDismiss = () => {
     setDismissed(true);
     setShowIOSHint(false);
-    try { localStorage.setItem('wandr-install-dismissed', '1'); } catch { }
+    try { localStorage.setItem('itravel-install-dismissed', '1'); } catch { }
   };
 
   if (dismissed) return null;
@@ -53,9 +53,9 @@ export default function InstallBanner() {
   if (prompt) {
     return (
       <div className="fixed bottom-20 left-4 right-4 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 flex items-center gap-3 animate-in slide-in-from-bottom-4">
-        <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">W</div>
+        <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">iT</div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900">Install Wandr</p>
+          <p className="text-sm font-semibold text-gray-900">Install i-Travel</p>
           <p className="text-xs text-gray-500">Add to home screen for the best experience</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
@@ -75,9 +75,9 @@ export default function InstallBanner() {
     return (
       <div className="fixed bottom-20 left-4 right-4 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 animate-in slide-in-from-bottom-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">W</div>
+          <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">iT</div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">Install Wandr</p>
+            <p className="text-sm font-semibold text-gray-900">Install i-Travel</p>
             <p className="text-xs text-gray-500 mt-0.5">
               Tap the <span className="font-semibold">Share</span> button{' '}
               <svg className="inline w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

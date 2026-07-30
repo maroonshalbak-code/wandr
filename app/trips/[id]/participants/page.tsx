@@ -7,11 +7,23 @@ import BackButton from '@/components/BackButton';
 import { Avatar } from '@/components/Avatar';
 import { useTrips } from '@/context/TripsContext';
 import { useLang } from '@/context/LanguageContext';
+import { createClient } from '@/lib/supabase/client';
 
 const COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#ec4899'];
 
 function getInitials(name: string) {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+async function isRegisteredUser(email: string): Promise<boolean> {
+  if (!email.trim()) return false;
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', email.trim().toLowerCase())
+    .maybeSingle();
+  return !!data;
 }
 
 export default function ParticipantsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,15 +36,49 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [inviteState, setInviteState] = useState<Record<string, 'sent'>>({});
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    setAdding(true);
+
     const color = COLORS[trip.participants.length % COLORS.length];
-    addParticipant(id, { name: name.trim(), email: email.trim(), initials: getInitials(name), color, role: 'member' });
-    setName('');
-    setEmail('');
-    setShowForm(false);
+    const participantEmail = email.trim().toLowerCase();
+
+    const registered = participantEmail ? await isRegisteredUser(participantEmail) : false;
+
+    addParticipant(id, {
+      name: name.trim(),
+      email: participantEmail,
+      initials: getInitials(name),
+      color,
+      role: 'member',
+    });
+
+    if (participantEmail && !registered) {
+      const appUrl = window.location.origin;
+      const organizer = trip.participants[0]?.name ?? 'Someone';
+      const subject = encodeURIComponent(`You've been invited to join ${trip.name} on i-Travel`);
+      const body = encodeURIComponent(
+        `Hi ${name.trim()},\n\n${organizer} has invited you to join the trip "${trip.name}" on i-Travel.\n\nInstall the app here:\n${appUrl}\n\nSee you on the trip! ✈️`
+      );
+      window.open(`mailto:${participantEmail}?subject=${subject}&body=${body}`, '_blank');
+    }
+
+    setName(''); setEmail(''); setAdding(false); setShowForm(false);
+  };
+
+  const sendInvite = (p: { id: string; name: string; email: string }) => {
+    const appUrl = window.location.origin;
+    const organizer = trip.participants[0]?.name ?? 'Someone';
+    const subject = encodeURIComponent(`You've been invited to join ${trip.name} on i-Travel`);
+    const body = encodeURIComponent(
+      `Hi ${p.name},\n\n${organizer} has invited you to join the trip "${trip.name}" on i-Travel.\n\nInstall the app here:\n${appUrl}\n\nSee you on the trip! ✈️`
+    );
+    window.open(`mailto:${p.email}?subject=${subject}&body=${body}`, '_blank');
+    setInviteState((prev) => ({ ...prev, [p.id]: 'sent' }));
   };
 
   return (
@@ -55,24 +101,18 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
         {showForm && (
           <form onSubmit={handleAdd} className="bg-blue-50 rounded-2xl p-4 mb-4 flex flex-col gap-3">
             <p className="text-sm font-semibold text-blue-900">{t('inviteSomeone')}</p>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Full name"
-              className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-              required
-            />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-              className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-            />
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name"
+              className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" required />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com"
+              className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
+            <p className="text-[11px] text-gray-400">If they don't have an account yet, we'll open an email invite for you to send.</p>
             <div className="flex gap-2">
-              <button type="submit" className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600">{t('add')}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">{t('cancel')}</button>
+              <button type="submit" disabled={adding} className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-60">
+                {adding ? '…' : t('add')}
+              </button>
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
+                {t('cancel')}
+              </button>
             </div>
           </form>
         )}
@@ -84,19 +124,22 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
             <div key={p.id} className="flex items-center gap-3 p-3.5">
               <Avatar participant={p} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">{p.name} {p.email === 'maroon.shalbak@consensys.net' ? '(you)' : ''}</p>
+                <p className="text-sm font-medium text-gray-900">{p.name}</p>
                 <p className="text-xs text-gray-400 truncate">{p.email}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${p.role === 'organizer' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
                   {p.role}
                 </span>
+                {p.role !== 'organizer' && p.email && (
+                  <button onClick={() => sendInvite({ id: p.id, name: p.name, email: p.email! })}
+                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors ${inviteState[p.id] === 'sent' ? 'bg-green-100 text-green-700' : 'bg-orange-50 text-orange-500 hover:bg-orange-100'}`}>
+                    {inviteState[p.id] === 'sent' ? '✓ Invited' : '✉ Invite'}
+                  </button>
+                )}
                 {p.role !== 'organizer' && (
-                  <button
-                    onClick={() => removeParticipant(id, p.id)}
-                    className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-gray-300 hover:text-red-400 transition-colors"
-                    aria-label="Remove"
-                  >
+                  <button onClick={() => removeParticipant(id, p.id)}
+                    className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-gray-300 hover:text-red-400 transition-colors" aria-label="Remove">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -107,9 +150,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
           ))}
 
           {trip.participants.length === 0 && (
-            <div className="p-6 text-center text-sm text-gray-400">
-              No participants yet. Tap + to invite someone.
-            </div>
+            <div className="p-6 text-center text-sm text-gray-400">{t('noParticipants')}</div>
           )}
         </div>
       </div>

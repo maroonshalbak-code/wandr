@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Wandr',
-    short_name: 'Wandr',
+    name: 'i-Travel',
+    short_name: 'i-Travel',
     description: 'Plan and share trips with your crew',
     start_url: '/',
     display: 'standalone',

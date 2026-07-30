@@ -8,13 +8,13 @@ import RegisterSW from '@/components/RegisterSW';
 const geist = Geist({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Wandr — Travel Manager',
+  title: 'i-Travel — Travel Manager',
   description: 'Plan and share trips with your crew.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Wandr',
+    title: 'i-Travel',
   },
   icons: {
     icon: '/icons/favicon-32.png',

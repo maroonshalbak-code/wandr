@@ -20,7 +20,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // Load saved language on first mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('wandr-locale') as SupportedLocale;
+      const saved = localStorage.getItem('itravel-locale') as SupportedLocale;
       if (saved && saved in LOCALE_NAMES) setLocaleState(saved);
     } catch { /* SSR guard */ }
   }, []);
@@ -28,8 +28,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // Apply RTL direction + persist whenever locale changes
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
-    try { localStorage.setItem('wandr-locale', locale); } catch { /* ignore */ }
+    document.documentElement.dir = (locale === 'ar' || locale === 'he') ? 'rtl' : 'ltr';
+    try { localStorage.setItem('itravel-locale', locale); } catch { /* ignore */ }
   }, [locale]);
 
   const setLocale = useCallback((l: SupportedLocale) => setLocaleState(l), []);
@@ -41,7 +41,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     t: (key: string) => translations[locale][key] ?? translations.en[key] ?? key,
     localeNames: LOCALE_NAMES,
     localeFlags: LOCALE_FLAGS,
-    isRTL: locale === 'ar',
+    isRTL: locale === 'ar' || locale === 'he',
   }), [locale, setLocale]);
 
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
