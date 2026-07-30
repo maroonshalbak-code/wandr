@@ -186,20 +186,29 @@ export async function insertTrip(data: Omit<Trip, 'id' | 'participants' | 'photo
   if (error) throw error;
 
   // Auto-add the creator as organizer participant
-  const initials = (user.user_metadata?.name as string ?? user.email ?? 'U')
-    .split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
+  const organizerName = (user.user_metadata?.name as string) ?? user.email ?? 'You';
+  const initials = organizerName.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
 
-  await supabase.from('participants').insert({
+  const { data: participantRow } = await supabase.from('participants').insert({
     trip_id: trip.id,
     user_id: user.id,
-    name: (user.user_metadata?.name as string) ?? user.email ?? 'You',
+    name: organizerName,
     email: user.email,
     initials,
     color: '#3b82f6',
     role: 'organizer',
-  });
+  }).select().single();
 
-  return { ...rowToTrip(trip as Record<string, unknown>), participants: [], photos: [], plans: [], tickets: [], tasks: [], payments: [] };
+  const organizer: Participant = {
+    id: (participantRow as Record<string, unknown>)?.id as string ?? '',
+    name: organizerName,
+    email: user.email ?? '',
+    initials,
+    color: '#3b82f6',
+    role: 'organizer',
+  };
+
+  return { ...rowToTrip(trip as Record<string, unknown>), participants: [organizer], photos: [], plans: [], tickets: [], tasks: [], payments: [] };
 }
 
 export async function deleteTrip(id: string) {
