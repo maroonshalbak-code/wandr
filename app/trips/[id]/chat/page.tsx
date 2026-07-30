@@ -12,11 +12,11 @@ import type { Message } from '@/lib/types';
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTrip } = useTrips();
+  const { getTrip, loading } = useTrips();
   const { t } = useLang();
   const trip = getTrip(id);
-  if (!trip) notFound();
 
+  // All hooks before any early returns (Rules of Hooks)
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -27,7 +27,6 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
 
   useEffect(() => {
     const supabase = createClient();
-    // getSession reads cookie locally — no extra network call
     supabase.auth.getSession().then(({ data }) => setCurrentUserId(data.session?.user?.id ?? null));
   }, []);
 
@@ -40,17 +39,25 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     }
   }, [id]);
 
-  // Initial load + poll every 4 seconds
   useEffect(() => {
     loadMessages();
     const interval = setInterval(loadMessages, 4000);
     return () => clearInterval(interval);
   }, [loadMessages]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Early returns after all hooks
+  if (loading) return (
+    <MobileShell>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+      </div>
+    </MobileShell>
+  );
+  if (!trip) notFound();
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();

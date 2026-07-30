@@ -13,11 +13,11 @@ const PHOTO_BGS = ['#dbeafe','#fef3c7','#dcfce7','#fce7f3','#ede9fe','#fee2e2','
 
 export default function PhotosPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTrip, addPhoto, removePhoto } = useTrips();
-  const trip = getTrip(id);
-  if (!trip) notFound();
-
+  const { getTrip, loading, addPhoto, removePhoto } = useTrips();
   const { t } = useLang();
+  const trip = getTrip(id);
+
+  // All hooks before any early returns (Rules of Hooks)
   const [showForm, setShowForm] = useState(false);
   const [caption, setCaption] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('📸');
@@ -27,6 +27,16 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Early returns after all hooks
+  if (loading) return (
+    <MobileShell>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+      </div>
+    </MobileShell>
+  );
+  if (!trip) notFound();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

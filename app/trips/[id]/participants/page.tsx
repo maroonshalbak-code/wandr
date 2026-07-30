@@ -28,16 +28,26 @@ async function isRegisteredUser(email: string): Promise<boolean> {
 
 export default function ParticipantsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTrip, addParticipant, removeParticipant } = useTrips();
+  const { getTrip, loading, addParticipant, removeParticipant } = useTrips();
   const { t } = useLang();
   const trip = getTrip(id);
-  if (!trip) notFound();
 
+  // All hooks before any early returns (Rules of Hooks)
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [adding, setAdding] = useState(false);
   const [inviteState, setInviteState] = useState<Record<string, 'sent'>>({});
+
+  // Early returns after all hooks
+  if (loading) return (
+    <MobileShell>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+      </div>
+    </MobileShell>
+  );
+  if (!trip) notFound();
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();

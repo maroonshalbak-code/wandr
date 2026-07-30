@@ -19,9 +19,16 @@ const planTypeColors: Record<string, string> = {
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTrip } = useTrips();
+  const { getTrip, loading } = useTrips();
   const { t } = useLang();
   const trip = getTrip(id);
+  if (loading) return (
+    <MobileShell>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+      </div>
+    </MobileShell>
+  );
   if (!trip) notFound();
 
   const nights = Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / 86400000);

@@ -19,21 +19,32 @@ const typeEmojis: Record<Ticket['type'], string> = {
 
 export default function TicketsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTrip, addTicket, removeTicket } = useTrips();
+  const { getTrip, loading, addTicket, removeTicket } = useTrips();
   const { t } = useLang();
   const trip = getTrip(id);
-  if (!trip) notFound();
 
+  // All hooks before any early returns (Rules of Hooks)
+  // Use optional chaining for initializers that depend on trip
   const [showForm, setShowForm] = useState(false);
   const [type, setType] = useState<Ticket['type']>('flight');
   const [title, setTitle] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [date, setDate] = useState(trip.startDate);
+  const [date, setDate] = useState(trip?.startDate ?? '');
   const [time, setTime] = useState('');
-  const [passengers, setPassengers] = useState(trip.participants.length || 1);
+  const [passengers, setPassengers] = useState(trip?.participants.length || 1);
   const [status, setStatus] = useState<Ticket['status']>('pending');
   const [reference, setReference] = useState('');
+
+  // Early returns after all hooks
+  if (loading) return (
+    <MobileShell>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+      </div>
+    </MobileShell>
+  );
+  if (!trip) notFound();
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();

@@ -16,16 +16,26 @@ const STATUS_CONFIG: Record<Task['status'], { label: string; color: string; next
 
 export default function TasksPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTrip, addTask, updateTask, removeTask } = useTrips();
+  const { getTrip, loading, addTask, updateTask, removeTask } = useTrips();
   const { t } = useLang();
   const trip = getTrip(id);
-  if (!trip) notFound();
 
+  // All hooks must be declared before any early returns (Rules of Hooks)
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Early returns after all hooks
+  if (loading) return (
+    <MobileShell>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+      </div>
+    </MobileShell>
+  );
+  if (!trip) notFound();
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();

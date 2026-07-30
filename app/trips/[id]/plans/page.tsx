@@ -34,18 +34,29 @@ function groupByDate(plans: Plan[]) {
 
 export default function PlansPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTrip, addPlan, removePlan } = useTrips();
+  const { getTrip, loading, addPlan, removePlan } = useTrips();
   const { t } = useLang();
   const trip = getTrip(id);
-  if (!trip) notFound();
 
+  // All hooks before any early returns (Rules of Hooks)
+  // Use optional chaining for initializers that depend on trip
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(trip.startDate);
+  const [date, setDate] = useState(trip?.startDate ?? '');
   const [time, setTime] = useState('');
   const [type, setType] = useState<Plan['type']>('activity');
   const [location, setLocation] = useState('');
+
+  // Early returns after all hooks
+  if (loading) return (
+    <MobileShell>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+      </div>
+    </MobileShell>
+  );
+  if (!trip) notFound();
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
