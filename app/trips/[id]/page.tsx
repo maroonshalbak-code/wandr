@@ -2,7 +2,6 @@
 
 import { use, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { notFound } from 'next/navigation';
 import MobileShell from '@/components/MobileShell';
 import BackButton from '@/components/BackButton';
@@ -20,7 +19,6 @@ const planTypeColors: Record<string, string> = {
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   const { getTrip, loading, removeTrip } = useTrips();
   const { t } = useLang();
   const trip = getTrip(id);
@@ -44,7 +42,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     setDeleting(true);
     try {
       await removeTrip(id);
-      router.push('/');
+      window.location.href = '/';
     } catch {
       setDeleting(false);
       setShowDeleteConfirm(false);
