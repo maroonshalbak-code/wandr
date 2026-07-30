@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import { Trip, Participant, Photo, Plan, Ticket, TripStatus, Message } from '@/lib/types';
+import { Trip, Participant, Photo, Plan, Ticket, TripStatus, Message, Task } from '@/lib/types';
 
 // ── helpers ──────────────────────────────────────────────────
 
@@ -17,6 +17,7 @@ function rowToTrip(row: Record<string, unknown>): Trip {
     photos: [],
     plans: [],
     tickets: [],
+    tasks: [],
   };
 }
 
@@ -67,6 +68,17 @@ function rowToMessage(row: Record<string, unknown>): Message {
   };
 }
 
+function rowToTask(row: Record<string, unknown>): Task {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    description: (row.description as string) ?? undefined,
+    status: (row.status as Task['status']) ?? 'new',
+    assigneeId: (row.assignee_id as string) ?? undefined,
+    assigneeName: (row.assignee_name as string) ?? undefined,
+  };
+}
+
 function rowToTicket(row: Record<string, unknown>): Ticket {
   return {
     id: row.id as string,
@@ -91,17 +103,22 @@ export async function fetchTrips(): Promise<Trip[]> {
   if (!user) return [];
 
   // Get trips where user is a participant or creator
-  const { data: participantRows } = await supabase
-    .from('participants')
-    .select('trip_id')
-    .eq('user_id', user.id);
+  // Match by user_id AND by email (for participants added before they signed up)
+  const [{ data: participantRows }, { data: emailRows }] = await Promise.all([
+    supabase.from('participants').select('trip_id').eq('user_id', user.id),
+    supabase.from('participants').select('trip_id').eq('email', user.email ?? ''),
+  ]);
 
-  const participantTripIds = (participantRows ?? []).map((r) => r.trip_id as string);
+  const participantTripIds = [
+    ...(participantRows ?? []).map((r) => r.trip_id as string),
+    ...(emailRows ?? []).map((r) => r.trip_id as string),
+  ];
+  const uniqueTripIds = [...new Set(participantTripIds)];
 
   const { data: trips } = await supabase
     .from('trips')
     .select('*')
-    .or(`created_by.eq.${user.id},id.in.(${participantTripIds.join(',') || 'null'})`)
+    .or(`created_by.eq.${user.id},id.in.(${uniqueTripIds.join(',') || 'null'})`)
     .order('start_date', { ascending: true });
 
   if (!trips?.length) return [];
@@ -109,12 +126,13 @@ export async function fetchTrips(): Promise<Trip[]> {
   const tripIds = trips.map((t) => t.id as string);
 
   // Fetch all related data in parallel
-  const [{ data: participants }, { data: photos }, { data: plans }, { data: tickets }] =
+  const [{ data: participants }, { data: photos }, { data: plans }, { data: tickets }, { data: tasks }] =
     await Promise.all([
       supabase.from('participants').select('*').in('trip_id', tripIds),
       supabase.from('photos').select('*').in('trip_id', tripIds).order('uploaded_at', { ascending: false }),
       supabase.from('plans').select('*').in('trip_id', tripIds).order('date').order('time'),
       supabase.from('tickets').select('*').in('trip_id', tripIds).order('date'),
+      supabase.from('tasks').select('*').in('trip_id', tripIds).order('created_at'),
     ]);
 
   return trips.map((t) => ({
@@ -123,10 +141,11 @@ export async function fetchTrips(): Promise<Trip[]> {
     photos: (photos ?? []).filter((p) => p.trip_id === t.id).map((p) => rowToPhoto(p as Record<string, unknown>)),
     plans: (plans ?? []).filter((p) => p.trip_id === t.id).map((p) => rowToPlan(p as Record<string, unknown>)),
     tickets: (tickets ?? []).filter((p) => p.trip_id === t.id).map((p) => rowToTicket(p as Record<string, unknown>)),
+    tasks: (tasks ?? []).filter((p) => p.trip_id === t.id).map((p) => rowToTask(p as Record<string, unknown>)),
   }));
 }
 
-export async function insertTrip(data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets'>): Promise<Trip> {
+export async function insertTrip(data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets' | 'tasks'>): Promise<Trip> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -162,7 +181,7 @@ export async function insertTrip(data: Omit<Trip, 'id' | 'participants' | 'photo
     role: 'organizer',
   });
 
-  return { ...rowToTrip(trip as Record<string, unknown>), participants: [], photos: [], plans: [], tickets: [] };
+  return { ...rowToTrip(trip as Record<string, unknown>), participants: [], photos: [], plans: [], tickets: [], tasks: [] };
 }
 
 // ── Participants ───────────────────────────────────────────────
@@ -258,6 +277,46 @@ export async function insertTicket(tripId: string, data: Omit<Ticket, 'id'>) {
 export async function deleteTicket(id: string) {
   const supabase = createClient();
   const { error } = await supabase.from('tickets').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── Tasks ─────────────────────────────────────────────────────
+
+export async function insertTask(tripId: string, data: Omit<Task, 'id'>) {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data: row, error } = await supabase
+    .from('tasks')
+    .insert({
+      trip_id: tripId,
+      title: data.title,
+      description: data.description ?? null,
+      status: data.status,
+      assignee_id: data.assigneeId ?? null,
+      assignee_name: data.assigneeName ?? null,
+      created_by: session?.user?.id ?? null,
+    })
+    .select().single();
+  if (error) throw error;
+  return rowToTask(row as Record<string, unknown>);
+}
+
+export async function updateTask(id: string, updates: Partial<Pick<Task, 'status' | 'title' | 'description' | 'assigneeId' | 'assigneeName'>>) {
+  const supabase = createClient();
+  const patch: Record<string, unknown> = {};
+  if (updates.status !== undefined) patch.status = updates.status;
+  if (updates.title !== undefined) patch.title = updates.title;
+  if (updates.description !== undefined) patch.description = updates.description;
+  if (updates.assigneeId !== undefined) patch.assignee_id = updates.assigneeId;
+  if (updates.assigneeName !== undefined) patch.assignee_name = updates.assigneeName;
+  const { data: row, error } = await supabase.from('tasks').update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return rowToTask(row as Record<string, unknown>);
+}
+
+export async function deleteTask(id: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from('tasks').delete().eq('id', id);
   if (error) throw error;
 }
 

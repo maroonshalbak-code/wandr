@@ -39,6 +39,7 @@ export const mockTrips: Trip[] = [
       { id: 't2', type: 'train', title: 'Shinkansen', from: 'Tokyo', to: 'Kyoto', date: '2026-08-15', time: '09:10', duration: '1h 41m', passengers: 4, status: 'confirmed', reference: 'Nozomi 7' },
       { id: 't3', type: 'flight', title: 'Return flight', from: 'NRT', to: 'DXB', date: '2026-08-22', time: '23:55', duration: '9h 45m', passengers: 4, status: 'pending', reference: 'NH206' },
     ],
+    tasks: [],
   },
   {
     id: '2',
@@ -65,6 +66,7 @@ export const mockTrips: Trip[] = [
     tickets: [
       { id: 't4', type: 'flight', title: 'Outbound flight', from: 'DXB', to: 'LIS', date: '2026-09-04', time: '02:00', duration: '7h', passengers: 2, status: 'confirmed', reference: 'TP1400' },
     ],
+    tasks: [],
   },
   {
     id: '3',
@@ -92,5 +94,6 @@ export const mockTrips: Trip[] = [
     tickets: [
       { id: 't5', type: 'flight', title: 'Outbound flight', from: 'DXB', to: 'NAP', date: '2026-05-02', time: '06:00', duration: '6h 30m', passengers: 3, status: 'confirmed', reference: 'EK095' },
     ],
+    tasks: [],
   },
 ];

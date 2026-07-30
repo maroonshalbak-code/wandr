@@ -28,7 +28,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
   const sections = [
     { href: `/trips/${id}/chat`,         label: t('chat'),         count: null,                    icon: '💬' },
-    { href: `/trips/${id}/tickets`,      label: t('tickets'),      count: trip.tickets.length,     icon: '🎫' },
+    { href: `/trips/${id}/tasks`,        label: t('tasks'),        count: trip.tasks.length,       icon: '✅' },
     { href: `/trips/${id}/plans`,        label: t('plans'),        count: trip.plans.length,       icon: '🗓️' },
     { href: `/trips/${id}/photos`,       label: t('photos'),       count: trip.photos.length,      icon: '📷' },
     { href: `/trips/${id}/participants`, label: t('people'),       count: trip.participants.length, icon: '👥' },

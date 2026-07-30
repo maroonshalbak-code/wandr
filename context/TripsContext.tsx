@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Trip, Participant, Photo, Plan, Ticket } from '@/lib/types';
+import { Trip, Participant, Photo, Plan, Ticket, Task } from '@/lib/types';
 import * as db from '@/lib/db/trips';
 
 interface TripsContextValue {
@@ -10,7 +10,7 @@ interface TripsContextValue {
   error: string | null;
   reload: () => Promise<void>;
   getTrip: (id: string) => Trip | undefined;
-  addTrip: (data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets'>) => Promise<Trip>;
+  addTrip: (data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets' | 'tasks'>) => Promise<Trip>;
   addParticipant: (tripId: string, data: Omit<Participant, 'id'>) => Promise<void>;
   removeParticipant: (tripId: string, participantId: string) => Promise<void>;
   addPhoto: (tripId: string, data: Omit<Photo, 'id'> & { storagePath?: string }) => Promise<void>;
@@ -19,6 +19,9 @@ interface TripsContextValue {
   removePlan: (tripId: string, planId: string) => Promise<void>;
   addTicket: (tripId: string, data: Omit<Ticket, 'id'>) => Promise<void>;
   removeTicket: (tripId: string, ticketId: string) => Promise<void>;
+  addTask: (tripId: string, data: Omit<Task, 'id'>) => Promise<void>;
+  updateTask: (tripId: string, taskId: string, updates: Partial<Pick<Task, 'status' | 'title' | 'description' | 'assigneeId' | 'assigneeName'>>) => Promise<void>;
+  removeTask: (tripId: string, taskId: string) => Promise<void>;
 }
 
 const TripsContext = createContext<TripsContextValue | null>(null);
@@ -49,7 +52,7 @@ export function TripsProvider({ children }: { children: ReactNode }) {
   const updateLocal = (id: string, updater: (t: Trip) => Trip) =>
     setTrips((prev) => prev.map((t) => (t.id === id ? updater(t) : t)));
 
-  const addTrip = async (data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets'>) => {
+  const addTrip = async (data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets' | 'tasks'>) => {
     const trip = await db.insertTrip(data);
     setTrips((prev) => [trip, ...prev]);
     return trip;
@@ -101,8 +104,23 @@ export function TripsProvider({ children }: { children: ReactNode }) {
     updateLocal(tripId, (t) => ({ ...t, tickets: t.tickets.filter((tk) => tk.id !== ticketId) }));
   };
 
+  const addTask = async (tripId: string, data: Omit<Task, 'id'>) => {
+    const tk = await db.insertTask(tripId, data);
+    updateLocal(tripId, (t) => ({ ...t, tasks: [...t.tasks, tk] }));
+  };
+
+  const updateTask = async (tripId: string, taskId: string, updates: Partial<Pick<Task, 'status' | 'title' | 'description' | 'assigneeId' | 'assigneeName'>>) => {
+    const tk = await db.updateTask(taskId, updates);
+    updateLocal(tripId, (t) => ({ ...t, tasks: t.tasks.map((x) => (x.id === taskId ? tk : x)) }));
+  };
+
+  const removeTask = async (tripId: string, taskId: string) => {
+    await db.deleteTask(taskId);
+    updateLocal(tripId, (t) => ({ ...t, tasks: t.tasks.filter((tk) => tk.id !== taskId) }));
+  };
+
   return (
-    <TripsContext.Provider value={{ trips, loading, error, reload, getTrip, addTrip, addParticipant, removeParticipant, addPhoto, removePhoto, addPlan, removePlan, addTicket, removeTicket }}>
+    <TripsContext.Provider value={{ trips, loading, error, reload, getTrip, addTrip, addParticipant, removeParticipant, addPhoto, removePhoto, addPlan, removePlan, addTicket, removeTicket, addTask, updateTask, removeTask }}>
       {children}
     </TripsContext.Provider>
   );

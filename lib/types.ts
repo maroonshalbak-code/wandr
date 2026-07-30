@@ -53,6 +53,15 @@ export interface Ticket {
   reference?: string;
 }
 
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'new' | 'in_progress' | 'done';
+  assigneeId?: string;
+  assigneeName?: string;
+}
+
 export interface Trip {
   id: string;
   name: string;
@@ -66,4 +75,5 @@ export interface Trip {
   photos: Photo[];
   plans: Plan[];
   tickets: Ticket[];
+  tasks: Task[];
 }

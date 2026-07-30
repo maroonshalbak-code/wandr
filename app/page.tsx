@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import MobileShell from '@/components/MobileShell';
 import BottomNav from '@/components/BottomNav';
@@ -7,10 +8,23 @@ import Badge from '@/components/Badge';
 import InstallBanner from '@/components/InstallBanner';
 import { useTrips } from '@/context/TripsContext';
 import { useLang } from '@/context/LanguageContext';
+import { createClient } from '@/lib/supabase/client';
 
 export default function HomePage() {
   const { trips, loading, error } = useTrips();
   const { t } = useLang();
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      const name = (user?.user_metadata?.name as string)
+        ?? user?.email?.split('@')[0]
+        ?? '';
+      setUserName(name);
+    });
+  }, []);
 
   const upcoming = trips.filter((t) => t.status === 'upcoming' || t.status === 'planning' || t.status === 'active');
   const past = trips.filter((t) => t.status === 'completed');
@@ -54,7 +68,7 @@ export default function HomePage() {
         {!loading && !error && (
           <>
             <div className="bg-blue-50 rounded-2xl p-4 mb-4">
-              <p className="text-sm text-blue-500 font-medium">Hey, Maroon 👋</p>
+              <p className="text-sm text-blue-500 font-medium">Hey, {userName} 👋</p>
               <p className="text-lg font-semibold text-blue-900 mt-0.5">
                 {upcoming.length} {t('trips').toLowerCase()} {t('plans').toLowerCase()}
               </p>
