@@ -194,8 +194,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Delete &ldquo;{trip.name}&rdquo;?</p>
-                <p className="text-xs text-gray-400 mt-0.5">All photos, plans, tasks, and payments will be permanently deleted.</p>
+                <p className="text-sm font-semibold text-gray-900">{t('deleteTrip')} &ldquo;{trip.name}&rdquo;?</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('deleteTripWarning')}</p>
               </div>
             </div>
             <div className="flex gap-2 mt-5">
@@ -204,7 +204,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 disabled={deleting}
                 className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 disabled:opacity-60"
               >
-                {deleting ? 'Deleting…' : 'Delete trip'}
+                {deleting ? '…' : t('deleteTrip')}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}

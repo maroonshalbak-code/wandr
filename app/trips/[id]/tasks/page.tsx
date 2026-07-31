@@ -8,12 +8,6 @@ import { useTrips } from '@/context/TripsContext';
 import { useLang } from '@/context/LanguageContext';
 import { Task } from '@/lib/types';
 
-const STATUS_CONFIG: Record<Task['status'], { label: string; color: string; next: Task['status'] }> = {
-  new:         { label: 'New',         color: 'bg-gray-100 text-gray-600',    next: 'in_progress' },
-  in_progress: { label: 'In Progress', color: 'bg-amber-100 text-amber-700',  next: 'done' },
-  done:        { label: 'Done',        color: 'bg-green-100 text-green-700',  next: 'new' },
-};
-
 export default function TasksPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { getTrip, loading, addTask, updateTask, removeTask } = useTrips();
@@ -26,8 +20,8 @@ export default function TasksPage({ params }: { params: Promise<{ id: string }> 
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // Early returns after all hooks
   if (loading) return (
     <MobileShell>
       <div className="flex-1 flex items-center justify-center">
@@ -52,12 +46,63 @@ export default function TasksPage({ params }: { params: Promise<{ id: string }> 
     setTitle(''); setDescription(''); setAssigneeId(''); setSaving(false); setShowForm(false);
   };
 
-  const cycleStatus = async (task: Task) => {
-    await updateTask(id, task.id, { status: STATUS_CONFIG[task.status].next });
+  const toggleStatus = async (task: Task, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next: Task['status'] = task.status === 'done' ? 'new' : 'done';
+    await updateTask(id, task.id, { status: next });
+    // Update selectedTask if it's open
+    if (selectedTask?.id === task.id) {
+      setSelectedTask({ ...selectedTask, status: next });
+    }
   };
 
-  // Group by status
-  const byStatus = (s: Task['status']) => trip.tasks.filter((t) => t.status === s);
+  const handleDelete = async (taskId: string) => {
+    await removeTask(id, taskId);
+    setSelectedTask(null);
+  };
+
+  const newTasks = trip.tasks.filter((t) => t.status === 'new');
+  const doneTasks = trip.tasks.filter((t) => t.status === 'done');
+
+  const TaskCard = ({ task }: { task: Task }) => (
+    <button
+      onClick={() => setSelectedTask(task)}
+      className="bg-white rounded-2xl border border-gray-100 p-3.5 w-full text-left hover:border-gray-200 hover:shadow-sm transition-all active:scale-[0.99]"
+    >
+      <div className="flex items-start gap-3">
+        {/* Tap circle to toggle status — stopPropagation so it doesn't open the modal */}
+        <button
+          onClick={(e) => toggleStatus(task, e)}
+          className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-colors ${
+            task.status === 'done' ? 'bg-green-400 border-green-400' : 'border-gray-300 hover:border-blue-400'
+          }`}
+          aria-label="Toggle status"
+        >
+          {task.status === 'done' && (
+            <svg className="w-full h-full p-0.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+            </svg>
+          )}
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium ${task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+            {task.title}
+          </p>
+          {task.description && (
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{task.description}</p>
+          )}
+          {task.assigneeName && (
+            <span className="inline-block text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1.5">
+              👤 {task.assigneeName}
+            </span>
+          )}
+        </div>
+        <svg className="w-4 h-4 text-gray-300 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+        </svg>
+      </div>
+    </button>
+  );
 
   return (
     <MobileShell>
@@ -81,23 +126,19 @@ export default function TasksPage({ params }: { params: Promise<{ id: string }> 
             <p className="text-sm font-semibold text-blue-900">{t('addTask')}</p>
             <input
               type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('taskName')}
+              placeholder={t('taskName')} required autoFocus
               className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-              required
             />
             <textarea
               value={description} onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('taskDescription')}
-              rows={2}
+              placeholder={t('taskDescription')} rows={2}
               className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white resize-none"
             />
             {trip.participants.length > 0 && (
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">{t('assignee')}</label>
-                <select
-                  value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}
-                  className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-                >
+                <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}
+                  className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
                   <option value="">{t('unassigned')}</option>
                   {trip.participants.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -125,71 +166,105 @@ export default function TasksPage({ params }: { params: Promise<{ id: string }> 
           </div>
         )}
 
-        {(['new', 'in_progress', 'done'] as Task['status'][]).map((status) => {
-          const tasks = byStatus(status);
-          if (tasks.length === 0) return null;
-          return (
-            <div key={status} className="mb-5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${STATUS_CONFIG[status].color}`}>
-                  {STATUS_CONFIG[status].label}
+        {newTasks.length > 0 && (
+          <div className="mb-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                {t('statusNew')}
+              </span>
+              <span className="text-[11px] text-gray-400">{newTasks.length}</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {newTasks.map((task) => <TaskCard key={task.id} task={task} />)}
+            </div>
+          </div>
+        )}
+
+        {doneTasks.length > 0 && (
+          <div className="mb-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+                {t('statusDone')}
+              </span>
+              <span className="text-[11px] text-gray-400">{doneTasks.length}</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {doneTasks.map((task) => <TaskCard key={task.id} task={task} />)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Task detail bottom sheet */}
+      {selectedTask && (
+        <div className="absolute inset-0 bg-black/50 flex items-end z-50" onClick={() => setSelectedTask(null)}>
+          <div className="w-full bg-white rounded-t-3xl p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+
+            {/* Status + title */}
+            <div className="flex items-start gap-3 mb-4">
+              <button
+                onClick={(e) => toggleStatus(selectedTask, e)}
+                className={`w-6 h-6 rounded-full border-2 flex-shrink-0 mt-0.5 transition-colors ${
+                  selectedTask.status === 'done' ? 'bg-green-400 border-green-400' : 'border-gray-300'
+                }`}
+                aria-label="Toggle status"
+              >
+                {selectedTask.status === 'done' && (
+                  <svg className="w-full h-full p-0.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                  </svg>
+                )}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className={`text-base font-semibold ${selectedTask.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                  {selectedTask.title}
+                </p>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full inline-block mt-1 ${
+                  selectedTask.status === 'done' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {selectedTask.status === 'done' ? t('statusDone') : t('statusNew')}
                 </span>
-                <span className="text-[11px] text-gray-400">{tasks.length}</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                {tasks.map((task) => (
-                  <div key={task.id} className="bg-white rounded-2xl border border-gray-100 p-3.5 group">
-                    <div className="flex items-start gap-3">
-                      {/* Tap circle to cycle status */}
-                      <button
-                        onClick={() => cycleStatus(task)}
-                        className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-colors ${
-                          task.status === 'done'
-                            ? 'bg-green-400 border-green-400'
-                            : task.status === 'in_progress'
-                            ? 'border-amber-400 bg-amber-100'
-                            : 'border-gray-300 hover:border-blue-400'
-                        }`}
-                        aria-label="Cycle status"
-                      >
-                        {task.status === 'done' && (
-                          <svg className="w-full h-full p-0.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                          </svg>
-                        )}
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                          {task.title}
-                        </p>
-                        {task.description && (
-                          <p className="text-xs text-gray-400 mt-0.5">{task.description}</p>
-                        )}
-                        {task.assigneeName && (
-                          <div className="flex items-center gap-1 mt-1.5">
-                            <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                              👤 {task.assigneeName}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => removeTask(id, task.id)}
-                        className="w-6 h-6 rounded-lg hover:bg-red-50 flex items-center justify-center text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-                        aria-label="Delete task"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
-          );
-        })}
-      </div>
+
+            {/* Details */}
+            <div className="flex flex-col gap-3">
+              {selectedTask.description && (
+                <div className="flex items-start gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                  <span className="text-lg">📝</span>
+                  <p className="text-sm text-gray-700">{selectedTask.description}</p>
+                </div>
+              )}
+              {selectedTask.assigneeName && (
+                <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                  <span className="text-lg">👤</span>
+                  <div>
+                    <p className="text-xs text-gray-400">{t('assignee')}</p>
+                    <p className="text-sm font-medium text-gray-800">{selectedTask.assigneeName}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => handleDelete(selectedTask.id)}
+                className="flex-1 py-3 rounded-2xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50"
+              >
+                {t('delete')}
+              </button>
+              <button
+                onClick={() => setSelectedTask(null)}
+                className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200"
+              >
+                {t('close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }

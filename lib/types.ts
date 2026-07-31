@@ -26,6 +26,7 @@ export interface Plan {
   description: string;
   date: string;
   time?: string;
+  endTime?: string;
   type: 'transport' | 'activity' | 'accommodation' | 'food';
   location?: string;
 }
@@ -57,7 +58,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'new' | 'in_progress' | 'done';
+  status: 'new' | 'done';
   assigneeId?: string;
   assigneeName?: string;
 }

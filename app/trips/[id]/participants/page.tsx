@@ -161,13 +161,13 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
                 onClick={() => setMode('search')}
                 className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${mode === 'search' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
               >
-                🔍 Search users
+                🔍 {t('searchUsers')}
               </button>
               <button
                 onClick={() => setMode('invite')}
                 className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${mode === 'invite' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
               >
-                ✉️ Invite new
+                ✉️ {t('inviteNew')}
               </button>
             </div>
 
@@ -176,7 +176,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
               <div className="flex flex-col gap-3">
                 <input
                   type="text" value={query} onChange={(e) => handleQueryChange(e.target.value)}
-                  placeholder="Search by name or email…"
+                  placeholder={t('searchPlaceholder')}
                   autoFocus
                   className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                 />
@@ -187,8 +187,8 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
                 )}
                 {!searching && query.length >= 2 && results.length === 0 && (
                   <p className="text-xs text-gray-400 text-center py-2">
-                    No users found.{' '}
-                    <button onClick={() => setMode('invite')} className="text-blue-500 underline">Invite them instead</button>
+                    {t('noUsersFound')}.{' '}
+                    <button onClick={() => setMode('invite')} className="text-blue-500 underline">{t('inviteInstead')}</button>
                   </p>
                 )}
                 {results.length > 0 && (
@@ -214,7 +214,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
                   </div>
                 )}
                 {query.length < 2 && (
-                  <p className="text-xs text-gray-400 text-center">Type at least 2 characters to search</p>
+                  <p className="text-xs text-gray-400 text-center">{t('typeToSearch')}</p>
                 )}
                 <button onClick={closeForm} className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
                   {t('cancel')}
@@ -227,7 +227,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
               <form onSubmit={handleInvite} className="flex flex-col gap-3">
                 <input
                   type="text" value={inviteName} onChange={(e) => setInviteName(e.target.value)}
-                  placeholder="Full name" required autoFocus
+                  placeholder={t('fullName')} required autoFocus
                   className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                 />
                 <input
@@ -235,11 +235,11 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
                   placeholder="email@example.com" required
                   className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                 />
-                <p className="text-[11px] text-gray-400">We'll add them to the trip and open an email invite for you to send.</p>
+                <p className="text-[11px] text-gray-400">{t('inviteHint')}</p>
                 <div className="flex gap-2">
                   <button type="submit" disabled={inviting}
                     className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-60">
-                    {inviting ? '…' : 'Add & Invite'}
+                    {inviting ? '…' : t('addAndInvite')}
                   </button>
                   <button type="button" onClick={closeForm}
                     className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
@@ -263,12 +263,12 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${p.role === 'organizer' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {p.role}
+                  {p.role === 'organizer' ? t('organizer') : t('member')}
                 </span>
                 {p.role !== 'organizer' && p.email && (
                   <button onClick={() => sendInvite({ id: p.id, name: p.name, email: p.email! })}
                     className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors ${inviteState[p.id] === 'sent' ? 'bg-green-100 text-green-700' : 'bg-orange-50 text-orange-500 hover:bg-orange-100'}`}>
-                    {inviteState[p.id] === 'sent' ? '✓ Invited' : '✉ Invite'}
+                    {inviteState[p.id] === 'sent' ? t('invited') : t('inviteAction')}
                   </button>
                 )}
                 {p.role !== 'organizer' && (

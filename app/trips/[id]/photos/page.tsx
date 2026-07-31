@@ -126,7 +126,7 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
                   <svg className="w-7 h-7 text-blue-300 mb-1" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
                   </svg>
-                  <p className="text-xs text-blue-400">Tap to choose a photo</p>
+                  <p className="text-xs text-blue-400">{t('tapChoosePhoto')}</p>
                 </>
               )}
             </div>
@@ -135,7 +135,7 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
             {/* Fallback emoji if no file */}
             {!selectedFile && (
               <>
-                <p className="text-xs text-gray-500">Or choose an emoji instead</p>
+                <p className="text-xs text-gray-500">{t('chooseEmoji')}</p>
                 <div className="flex flex-wrap gap-2">
                   {PHOTO_EMOJIS.map((e) => (
                     <button key={e} type="button" onClick={() => setSelectedEmoji(e)}
@@ -158,7 +158,7 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
               type="text"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder="Caption (optional)"
+              placeholder={t('captionOptional')}
               className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
             />
 
@@ -167,7 +167,7 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
             <div className="flex gap-2">
               <button type="submit" disabled={uploading}
                 className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-60">
-                {uploading ? 'Uploading…' : t('add')}
+                {uploading ? t('uploading') : t('add')}
               </button>
               <button type="button" onClick={() => { setShowForm(false); setPreviewUrl(null); setSelectedFile(null); }}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">

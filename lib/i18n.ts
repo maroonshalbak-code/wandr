@@ -80,6 +80,46 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     addFirstPayment: 'Tap + to add the first payment.',
     total: 'Total',
     viewAttachment: 'View attachment',
+    // Plans
+    planTitle: 'Title',
+    planDetails: 'Details (optional)',
+    locationOptional: 'Location (optional)',
+    date: 'Date',
+    startTime: 'Start time',
+    endTime: 'End time',
+    type: 'Type',
+    noPlans: 'No plans yet',
+    tapToAdd: 'Tap + to add your first activity',
+    // Tasks
+    statusNew: 'New',
+    statusDone: 'Done',
+    // Photos
+    tapChoosePhoto: 'Tap to choose a photo',
+    chooseEmoji: 'Or choose an emoji instead',
+    captionOptional: 'Caption (optional)',
+    uploading: 'Uploading…',
+    // Payments
+    chooseFile: 'Choose file…',
+    // Participants
+    searchUsers: 'Search users',
+    inviteNew: 'Invite new',
+    searchPlaceholder: 'Search by name or email…',
+    typeToSearch: 'Type at least 2 characters',
+    noUsersFound: 'No users found',
+    inviteInstead: 'Invite them instead',
+    fullName: 'Full name',
+    inviteHint: "We'll add them to the trip and open an email invite.",
+    addAndInvite: 'Add & Invite',
+    organizer: 'Organizer',
+    member: 'Member',
+    invited: '✓ Invited',
+    inviteAction: '✉ Invite',
+    // Trip delete
+    deleteTrip: 'Delete trip',
+    deleteTripWarning: 'All photos, plans, tasks, and payments will be permanently deleted.',
+    // General
+    close: 'Close',
+    delete: 'Delete',
   },
   ar: {
     trips: 'الرحلات',
@@ -148,6 +188,46 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     addFirstPayment: 'اضغط + لإضافة أول دفعة.',
     total: 'الإجمالي',
     viewAttachment: 'عرض المرفق',
+    // Plans
+    planTitle: 'العنوان',
+    planDetails: 'التفاصيل (اختياري)',
+    locationOptional: 'الموقع (اختياري)',
+    date: 'التاريخ',
+    startTime: 'وقت البداية',
+    endTime: 'وقت النهاية',
+    type: 'النوع',
+    noPlans: 'لا خطط بعد',
+    tapToAdd: 'اضغط + لإضافة أول نشاط',
+    // Tasks
+    statusNew: 'جديدة',
+    statusDone: 'مكتملة',
+    // Photos
+    tapChoosePhoto: 'اضغط لاختيار صورة',
+    chooseEmoji: 'أو اختر رمزاً بدلاً من ذلك',
+    captionOptional: 'تعليق (اختياري)',
+    uploading: 'جارٍ الرفع…',
+    // Payments
+    chooseFile: 'اختر ملف…',
+    // Participants
+    searchUsers: 'البحث عن مستخدمين',
+    inviteNew: 'دعوة جديدة',
+    searchPlaceholder: 'ابحث بالاسم أو البريد…',
+    typeToSearch: 'أدخل حرفين على الأقل',
+    noUsersFound: 'لم يتم العثور على مستخدمين',
+    inviteInstead: 'دعوتهم بدلاً من ذلك',
+    fullName: 'الاسم الكامل',
+    inviteHint: 'سنضيفهم للرحلة ونفتح دعوة بريدية.',
+    addAndInvite: 'إضافة ودعوة',
+    organizer: 'منظم',
+    member: 'عضو',
+    invited: '✓ تمت الدعوة',
+    inviteAction: '✉ دعوة',
+    // Trip delete
+    deleteTrip: 'حذف الرحلة',
+    deleteTripWarning: 'ستُحذف جميع الصور والخطط والمهام والمدفوعات نهائياً.',
+    // General
+    close: 'إغلاق',
+    delete: 'حذف',
   },
   he: {
     trips: 'טיולים',
@@ -216,6 +296,46 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     addFirstPayment: 'לחץ + להוסיף תשלום ראשון.',
     total: 'סה"כ',
     viewAttachment: 'הצג קובץ מצורף',
+    // Plans
+    planTitle: 'כותרת',
+    planDetails: 'פרטים (אופציונלי)',
+    locationOptional: 'מיקום (אופציונלי)',
+    date: 'תאריך',
+    startTime: 'שעת התחלה',
+    endTime: 'שעת סיום',
+    type: 'סוג',
+    noPlans: 'אין תוכניות עדיין',
+    tapToAdd: 'לחץ + להוסיף פעילות ראשונה',
+    // Tasks
+    statusNew: 'חדשה',
+    statusDone: 'הושלמה',
+    // Photos
+    tapChoosePhoto: 'לחץ לבחירת תמונה',
+    chooseEmoji: 'או בחר אימוג\'י במקום',
+    captionOptional: 'כיתוב (אופציונלי)',
+    uploading: 'מעלה…',
+    // Payments
+    chooseFile: 'בחר קובץ…',
+    // Participants
+    searchUsers: 'חפש משתמשים',
+    inviteNew: 'הזמן חדש',
+    searchPlaceholder: 'חפש לפי שם או דוא"ל…',
+    typeToSearch: 'הקלד לפחות 2 תווים',
+    noUsersFound: 'לא נמצאו משתמשים',
+    inviteInstead: 'הזמן אותם במקום',
+    fullName: 'שם מלא',
+    inviteHint: 'נוסיף אותם לטיול ונפתח הזמנה במייל.',
+    addAndInvite: 'הוסף והזמן',
+    organizer: 'מארגן',
+    member: 'חבר',
+    invited: '✓ הוזמן',
+    inviteAction: '✉ הזמן',
+    // Trip delete
+    deleteTrip: 'מחק טיול',
+    deleteTripWarning: 'כל התמונות, התוכניות, המשימות והתשלומים יימחקו לצמיתות.',
+    // General
+    close: 'סגור',
+    delete: 'מחק',
   },
 };
 

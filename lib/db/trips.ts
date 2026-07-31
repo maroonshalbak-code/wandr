@@ -53,6 +53,7 @@ function rowToPlan(row: Record<string, unknown>): Plan {
     description: (row.description as string) ?? '',
     date: row.date as string,
     time: (row.time as string) ?? undefined,
+    endTime: (row.end_time as string) ?? undefined,
     type: row.type as Plan['type'],
     location: (row.location as string) ?? undefined,
   };
@@ -74,7 +75,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     id: row.id as string,
     title: row.title as string,
     description: (row.description as string) ?? undefined,
-    status: (row.status as Task['status']) ?? 'new',
+    status: (row.status === 'done' ? 'done' : 'new') as Task['status'],
     assigneeId: (row.assignee_id as string) ?? undefined,
     assigneeName: (row.assignee_name as string) ?? undefined,
   };
@@ -271,7 +272,7 @@ export async function insertPlan(tripId: string, data: Omit<Plan, 'id'>) {
   const supabase = createClient();
   const { data: row, error } = await supabase
     .from('plans')
-    .insert({ trip_id: tripId, title: data.title, description: data.description, date: data.date, time: data.time, type: data.type, location: data.location ?? null })
+    .insert({ trip_id: tripId, title: data.title, description: data.description, date: data.date, time: data.time ?? null, end_time: data.endTime ?? null, type: data.type, location: data.location ?? null })
     .select().single();
   if (error) throw error;
   return rowToPlan(row as Record<string, unknown>);
