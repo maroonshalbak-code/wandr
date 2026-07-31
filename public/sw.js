@@ -1,4 +1,4 @@
-const CACHE = 'itravel-v1';
+const CACHE = 'itravel-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -19,17 +19,26 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests; skip Supabase API calls
+  // Only handle same-origin GET requests; pass everything else through
   if (event.request.method !== 'GET') return;
-  if (event.request.url.includes('supabase.co')) return;
+  const url = new URL(event.request.url);
+  if (url.origin !== location.origin) return;
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+        // Only cache valid responses
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        // Fall back to cache; if nothing cached, return a proper 504 Response
+        caches.match(event.request).then((cached) =>
+          cached ?? new Response('Network error', { status: 504, statusText: 'Gateway Timeout' })
+        )
+      )
   );
 });
