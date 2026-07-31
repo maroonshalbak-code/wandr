@@ -33,6 +33,7 @@ export default function ProfilePage() {
   const { t, locale, setLocale } = useLang();
 
   // Push notification state
+  const [pushSupported, setPushSupported] = useState(false);
   const [pushPermission, setPushPermission] = useState<string>('loading');
   const [pushLoading, setPushLoading] = useState(false);
   const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
@@ -48,7 +49,8 @@ export default function ProfilePage() {
     supabase.auth.getSession().then(async ({ data }) => {
       const u = data.session?.user ?? null;
       setUser(u);
-      // Push permission status
+      // Push permission status (evaluated after mount so window is available)
+      setPushSupported(isPushSupported());
       setPushPermission(getNotificationPermission());
       // Load saved preferences
       if (u) {
@@ -160,7 +162,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Push notifications */}
-        {isPushSupported() && (
+        {pushSupported && (
           <div className="w-full bg-white rounded-2xl border border-gray-100 p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-semibold text-gray-700">{t('notifications')}</p>
