@@ -52,6 +52,7 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
   const [date, setDate] = useState(trip?.startDate ?? '');
   const [time, setTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [planType, setPlanType] = useState<Plan['type']>('activity');
   const [location, setLocation] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
@@ -74,10 +75,11 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
       date,
       time: time || undefined,
       endTime: endTime || undefined,
+      endDate: endDate || undefined,
       type: planType,
       location: location.trim() || undefined,
     });
-    setTitle(''); setDescription(''); setTime(''); setEndTime(''); setLocation('');
+    setTitle(''); setDescription(''); setTime(''); setEndTime(''); setEndDate(''); setLocation('');
     setShowForm(false);
   };
 
@@ -146,6 +148,15 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
                   className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
               </div>
             </div>
+            {/* End date — only shown when end time is set */}
+            {endTime && (
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">{t('endDate')} <span className="text-gray-400">(if different from start)</span></label>
+                <input type="date" value={endDate} min={date} max={trip.endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
+              </div>
+            )}
             {/* Type */}
             <div>
               <label className="text-xs text-gray-500 mb-1 block">{t('type')}</label>
@@ -195,7 +206,18 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     {plan.time && (
                       <span className="text-xs text-gray-500 font-medium">
-                        {plan.time}{plan.endTime ? ` – ${plan.endTime}` : ''}
+                        {plan.time}
+                        {plan.endTime && (
+                          <>
+                            {' – '}
+                            {plan.endDate && plan.endDate !== plan.date && (
+                              <span className="text-gray-400">
+                                {new Date(plan.endDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}{' '}
+                              </span>
+                            )}
+                            {plan.endTime}
+                          </>
+                        )}
                       </span>
                     )}
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${typeBadgeColors[plan.type]}`}>
@@ -245,9 +267,20 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
                 <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
                   <span className="text-lg">⏰</span>
                   <div>
-                    <p className="text-xs text-gray-400">{t('startTime')}{selectedPlan.endTime ? ` – ${t('endTime')}` : ''}</p>
+                    <p className="text-xs text-gray-400">{t('startTime')} → {t('endTime')}</p>
                     <p className="text-sm font-medium text-gray-800">
-                      {selectedPlan.time ?? '–'}{selectedPlan.endTime ? ` → ${selectedPlan.endTime}` : ''}
+                      {selectedPlan.time ?? '–'}
+                      {selectedPlan.endTime && (
+                        <>
+                          {' → '}
+                          {selectedPlan.endDate && selectedPlan.endDate !== selectedPlan.date && (
+                            <span className="text-xs text-gray-500 font-normal mr-1">
+                              {new Date(selectedPlan.endDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                            </span>
+                          )}
+                          {selectedPlan.endTime}
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>

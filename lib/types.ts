@@ -27,6 +27,7 @@ export interface Plan {
   date: string;
   time?: string;
   endTime?: string;
+  endDate?: string;
   type: 'transport' | 'activity' | 'accommodation' | 'food';
   location?: string;
 }
