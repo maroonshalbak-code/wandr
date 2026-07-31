@@ -67,9 +67,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4">
           <p className="text-white font-bold text-lg leading-tight drop-shadow">{trip.name}</p>
-          <p className="text-white/80 text-xs mt-0.5 drop-shadow">
-            {new Date(trip.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })} –{' '}
-            {new Date(trip.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })} · {nights} night{nights !== 1 ? 's' : ''}
+          <p className="text-white/80 text-xs mt-0.5 drop-shadow" dir="ltr">
+            {new Date(trip.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })}
+            {' – '}
+            {new Date(trip.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}
+            {' · '}
+            {nights} {t(nights === 1 ? 'night' : 'nights')}
           </p>
         </div>
         <div className="absolute top-3 left-4">

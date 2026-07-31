@@ -122,6 +122,17 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     // General
     close: 'Close',
     delete: 'Delete',
+    // Trip statuses
+    statusPlanning: 'Planning',
+    statusUpcoming: 'Upcoming',
+    statusActive: 'Active',
+    statusCompleted: 'Completed',
+    statusConfirmed: 'Confirmed',
+    statusPending: 'Pending',
+    statusCancelled: 'Cancelled',
+    // Dates
+    night: 'night',
+    nights: 'nights',
   },
   ar: {
     trips: 'الرحلات',
@@ -232,6 +243,17 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     // General
     close: 'إغلاق',
     delete: 'حذف',
+    // Trip statuses
+    statusPlanning: 'تخطيط',
+    statusUpcoming: 'قادمة',
+    statusActive: 'نشطة',
+    statusCompleted: 'مكتملة',
+    statusConfirmed: 'مؤكدة',
+    statusPending: 'معلقة',
+    statusCancelled: 'ملغاة',
+    // Dates
+    night: 'ليلة',
+    nights: 'ليالٍ',
   },
   he: {
     trips: 'טיולים',
@@ -342,6 +364,17 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     // General
     close: 'סגור',
     delete: 'מחק',
+    // Trip statuses
+    statusPlanning: 'תכנון',
+    statusUpcoming: 'קרוב',
+    statusActive: 'פעיל',
+    statusCompleted: 'הושלם',
+    statusConfirmed: 'מאושר',
+    statusPending: 'ממתין',
+    statusCancelled: 'בוטל',
+    // Dates
+    night: 'לילה',
+    nights: 'לילות',
   },
 };
 
