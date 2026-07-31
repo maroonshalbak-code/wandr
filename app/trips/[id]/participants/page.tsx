@@ -53,14 +53,28 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
   const searchProfiles = async (q: string) => {
     if (q.trim().length < 2) { setResults([]); return; }
     setSearching(true);
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, name, email')
-      .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
-      .limit(10);
-    setResults((data ?? []).filter((p: Profile) => !existingEmails.has(p.email?.toLowerCase())));
-    setSearching(false);
+    try {
+      const supabase = createClient();
+      const term = `%${q}%`;
+
+      // Two separate ilike queries, then merge & dedupe
+      const [{ data: byName }, { data: byEmail }] = await Promise.all([
+        supabase.from('profiles').select('id, name, email').ilike('name', term).limit(10),
+        supabase.from('profiles').select('id, name, email').ilike('email', term).limit(10),
+      ]);
+
+      const seen = new Set<string>();
+      const merged: Profile[] = [];
+      for (const p of [...(byName ?? []), ...(byEmail ?? [])]) {
+        if (!seen.has(p.id) && !existingEmails.has((p.email as string)?.toLowerCase())) {
+          seen.add(p.id);
+          merged.push({ id: p.id as string, name: p.name as string, email: p.email as string });
+        }
+      }
+      setResults(merged);
+    } finally {
+      setSearching(false);
+    }
   };
 
   const handleQueryChange = (q: string) => {
