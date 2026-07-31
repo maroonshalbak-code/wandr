@@ -58,19 +58,25 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
       const term = `%${q}%`;
 
       // Two separate ilike queries, then merge & dedupe
-      const [{ data: byName }, { data: byEmail }] = await Promise.all([
+      const [nameRes, emailRes] = await Promise.all([
         supabase.from('profiles').select('id, name, email').ilike('name', term).limit(10),
         supabase.from('profiles').select('id, name, email').ilike('email', term).limit(10),
       ]);
 
+      console.log('[search] term:', term);
+      console.log('[search] byName:', nameRes.data, nameRes.error);
+      console.log('[search] byEmail:', emailRes.data, emailRes.error);
+      console.log('[search] existingEmails:', [...existingEmails]);
+
       const seen = new Set<string>();
       const merged: Profile[] = [];
-      for (const p of [...(byName ?? []), ...(byEmail ?? [])]) {
+      for (const p of [...(nameRes.data ?? []), ...(emailRes.data ?? [])]) {
         if (!seen.has(p.id) && !existingEmails.has((p.email as string)?.toLowerCase())) {
           seen.add(p.id);
           merged.push({ id: p.id as string, name: p.name as string, email: p.email as string });
         }
       }
+      console.log('[search] merged results:', merged);
       setResults(merged);
     } finally {
       setSearching(false);
