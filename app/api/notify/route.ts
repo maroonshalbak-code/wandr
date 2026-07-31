@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     // Get all participants of this trip (excluding the actor)
     const { data: participants } = await supabase
-      .from('trip_participants')
+      .from('participants')
       .select('user_id')
       .eq('trip_id', tripId);
 
