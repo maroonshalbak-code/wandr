@@ -31,7 +31,6 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Profile[]>([]);
   const [searching, setSearching] = useState(false);
-  const [searchDebug, setSearchDebug] = useState('');
 
   // Invite mode
   const [inviteName, setInviteName] = useState('');
@@ -63,11 +62,6 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
         supabase.from('profiles').select('id, name, email').ilike('name', term).limit(10),
         supabase.from('profiles').select('id, name, email').ilike('email', term).limit(10),
       ]);
-
-      const nameErr = nameRes.error?.message ?? 'ok';
-      const emailErr = emailRes.error?.message ?? 'ok';
-      const rawCount = (nameRes.data?.length ?? 0) + (emailRes.data?.length ?? 0);
-      setSearchDebug(`name:${nameErr} email:${emailErr} raw:${rawCount} existing:[${[...existingEmails].join(',')}]`);
 
       const seen = new Set<string>();
       const merged: Profile[] = [];
@@ -192,15 +186,10 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
                   </div>
                 )}
                 {!searching && query.length >= 2 && results.length === 0 && (
-                  <div className="text-center py-2">
-                    <p className="text-xs text-gray-400">
-                      No users found.{' '}
-                      <button onClick={() => setMode('invite')} className="text-blue-500 underline">Invite them instead</button>
-                    </p>
-                    {searchDebug && (
-                      <p className="text-[10px] text-orange-400 mt-1 break-all px-1">{searchDebug}</p>
-                    )}
-                  </div>
+                  <p className="text-xs text-gray-400 text-center py-2">
+                    No users found.{' '}
+                    <button onClick={() => setMode('invite')} className="text-blue-500 underline">Invite them instead</button>
+                  </p>
                 )}
                 {results.length > 0 && (
                   <div className="bg-white rounded-xl border border-blue-100 divide-y divide-gray-50 overflow-hidden">
