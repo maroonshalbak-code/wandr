@@ -33,9 +33,10 @@ export async function subscribeToPush(): Promise<'granted' | 'denied' | 'error'>
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       applicationServerKey: urlBase64ToUint8Array(
         process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-      ),
+      ) as unknown as BufferSource,
     });
 
     const supabase = createClient();
