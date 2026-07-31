@@ -20,7 +20,8 @@ const planTypeColors: Record<string, string> = {
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { getTrip, loading, removeTrip } = useTrips();
-  const { t } = useLang();
+  const { t, locale } = useLang();
+  const dateLocale = locale === 'ar' ? 'ar-SA' : locale === 'he' ? 'he-IL' : 'en-GB';
   const trip = getTrip(id);
 
   // All hooks before early returns
@@ -67,8 +68,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         <div className="absolute bottom-0 left-0 right-0 p-4">
           <p className="text-white font-bold text-lg leading-tight drop-shadow">{trip.name}</p>
           <p className="text-white/80 text-xs mt-0.5 drop-shadow">
-            {new Date(trip.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} –{' '}
-            {new Date(trip.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · {nights} night{nights !== 1 ? 's' : ''}
+            {new Date(trip.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })} –{' '}
+            {new Date(trip.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })} · {nights} night{nights !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="absolute top-3 left-4">

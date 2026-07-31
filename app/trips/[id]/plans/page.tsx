@@ -42,7 +42,8 @@ function groupByDate(plans: Plan[]) {
 export default function PlansPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { getTrip, loading, addPlan, removePlan } = useTrips();
-  const { t } = useLang();
+  const { t, locale } = useLang();
+  const dateLocale = locale === 'ar' ? 'ar-SA' : locale === 'he' ? 'he-IL' : 'en-GB';
   const trip = getTrip(id);
 
   // All hooks before any early returns
@@ -151,7 +152,7 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
             {/* End date — only shown when end time is set */}
             {endTime && (
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">{t('endDate')} <span className="text-gray-400">(if different from start)</span></label>
+                <label className="text-xs text-gray-500 mb-1 block">{t('endDate')} <span className="text-gray-400">({t('endDateHint')})</span></label>
                 <input type="date" value={endDate} min={date} max={trip.endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
@@ -186,7 +187,7 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
         {grouped.map(([d, plans]) => (
           <div key={d} className="mb-4">
             <p className="text-xs font-semibold text-gray-500 mb-2">
-              {new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {new Date(d + 'T00:00:00').toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
             <div className="flex flex-col gap-2">
               {plans.map((plan) => (
@@ -212,7 +213,7 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
                             {' – '}
                             {plan.endDate && plan.endDate !== plan.date && (
                               <span className="text-gray-400">
-                                {new Date(plan.endDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}{' '}
+                                {new Date(plan.endDate + 'T00:00:00').toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })}{' '}
                               </span>
                             )}
                             {plan.endTime}
@@ -258,7 +259,7 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
                 <div>
                   <p className="text-xs text-gray-400">{t('date')}</p>
                   <p className="text-sm font-medium text-gray-800">
-                    {new Date(selectedPlan.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {new Date(selectedPlan.date + 'T00:00:00').toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
                 </div>
               </div>
@@ -275,7 +276,7 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
                           {' → '}
                           {selectedPlan.endDate && selectedPlan.endDate !== selectedPlan.date && (
                             <span className="text-xs text-gray-500 font-normal mr-1">
-                              {new Date(selectedPlan.endDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                              {new Date(selectedPlan.endDate + 'T00:00:00').toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })}
                             </span>
                           )}
                           {selectedPlan.endTime}
