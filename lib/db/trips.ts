@@ -221,11 +221,11 @@ export async function deleteTrip(id: string) {
 
 // ── Participants ───────────────────────────────────────────────
 
-export async function insertParticipant(tripId: string, data: Omit<Participant, 'id'>) {
+export async function insertParticipant(tripId: string, data: Omit<Participant, 'id'>, userId?: string) {
   const supabase = createClient();
   const { data: row, error } = await supabase
     .from('participants')
-    .insert({ trip_id: tripId, name: data.name, email: data.email, initials: data.initials, color: data.color, role: data.role })
+    .insert({ trip_id: tripId, name: data.name, email: data.email, initials: data.initials, color: data.color, role: data.role, user_id: userId ?? null })
     .select().single();
   if (error) throw error;
   return rowToParticipant(row as Record<string, unknown>);

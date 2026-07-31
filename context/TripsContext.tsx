@@ -12,7 +12,7 @@ interface TripsContextValue {
   getTrip: (id: string) => Trip | undefined;
   addTrip: (data: Omit<Trip, 'id' | 'participants' | 'photos' | 'plans' | 'tickets' | 'tasks' | 'payments'>) => Promise<Trip>;
   removeTrip: (tripId: string) => Promise<void>;
-  addParticipant: (tripId: string, data: Omit<Participant, 'id'>) => Promise<void>;
+  addParticipant: (tripId: string, data: Omit<Participant, 'id'>, userId?: string) => Promise<void>;
   removeParticipant: (tripId: string, participantId: string) => Promise<void>;
   addPhoto: (tripId: string, data: Omit<Photo, 'id'> & { storagePath?: string }) => Promise<void>;
   removePhoto: (tripId: string, photoId: string) => Promise<void>;
@@ -66,8 +66,8 @@ export function TripsProvider({ children }: { children: ReactNode }) {
     setTrips((prev) => prev.filter((t) => t.id !== tripId));
   };
 
-  const addParticipant = async (tripId: string, data: Omit<Participant, 'id'>) => {
-    const p = await db.insertParticipant(tripId, data);
+  const addParticipant = async (tripId: string, data: Omit<Participant, 'id'>, userId?: string) => {
+    const p = await db.insertParticipant(tripId, data, userId);
     updateLocal(tripId, (t) => ({ ...t, participants: [...t.participants, p] }));
   };
 

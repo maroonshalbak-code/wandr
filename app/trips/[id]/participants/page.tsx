@@ -96,7 +96,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
       initials: getInitials(profile.name),
       color,
       role: 'member',
-    });
+    }, profile.id); // pass user_id so RLS lets them see the trip immediately
     setQuery(''); setResults([]); setShowForm(false);
   };
 
