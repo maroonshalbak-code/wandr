@@ -17,18 +17,18 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
   const { t } = useLang();
   const trip = getTrip(id);
 
-  // All hooks before any early returns (Rules of Hooks)
+  // All hooks before any early returns
   const [showForm, setShowForm] = useState(false);
   const [caption, setCaption] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('📸');
   const [selectedBg, setSelectedBg] = useState(PHOTO_BGS[0]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
-  // Early returns after all hooks
   if (loading) return (
     <MobileShell>
       <div className="flex-1 flex items-center justify-center">
@@ -39,10 +39,26 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
   if (!trip) notFound();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setSelectedFiles((prev) => [...prev, ...files]);
+    setPreviewUrls((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+    // reset input so same files can be re-selected if needed
+    e.target.value = '';
+  };
+
+  const removeSelected = (idx: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+    setPreviewUrls((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const resetForm = () => {
+    setShowForm(false);
+    setCaption('');
+    setSelectedFiles([]);
+    setPreviewUrls([]);
+    setUploadProgress('');
+    setUploadError('');
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -51,44 +67,53 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
     setUploading(true);
 
     try {
-      let url = '';
-      let storagePath: string | undefined;
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (selectedFile) {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        const ext = selectedFile.name.split('.').pop();
-        const path = `${user?.id ?? 'anon'}/${id}/${Date.now()}.${ext}`;
+      if (selectedFiles.length > 0) {
+        // Upload each file individually
+        for (let i = 0; i < selectedFiles.length; i++) {
+          setUploadProgress(`${i + 1} / ${selectedFiles.length}`);
+          const file = selectedFiles[i];
+          const ext = file.name.split('.').pop();
+          const path = `${user?.id ?? 'anon'}/${id}/${Date.now()}_${i}.${ext}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('trip-photos')
-          .upload(path, selectedFile, { upsert: false });
+          const { error: upErr } = await supabase.storage
+            .from('trip-photos')
+            .upload(path, file, { upsert: false });
+          if (upErr) throw upErr;
 
-        if (uploadError) throw uploadError;
+          const { data } = supabase.storage.from('trip-photos').getPublicUrl(path);
 
-        const { data } = supabase.storage.from('trip-photos').getPublicUrl(path);
-        url = data.publicUrl;
-        storagePath = path;
+          await addPhoto(id, {
+            url: data.publicUrl,
+            storagePath: path,
+            emoji: selectedEmoji,
+            caption: caption.trim() || `Photo ${i + 1}`,
+            uploadedBy: 'Me',
+            uploadedAt: new Date().toISOString().slice(0, 10),
+            bg: selectedBg,
+          });
+        }
+      } else {
+        // Emoji-only photo
+        await addPhoto(id, {
+          url: '',
+          storagePath: undefined,
+          emoji: selectedEmoji,
+          caption: caption.trim() || 'Untitled',
+          uploadedBy: 'Me',
+          uploadedAt: new Date().toISOString().slice(0, 10),
+          bg: selectedBg,
+        });
       }
 
-      await addPhoto(id, {
-        url,
-        storagePath,
-        emoji: selectedEmoji,
-        caption: caption.trim() || 'Untitled',
-        uploadedBy: 'Me',
-        uploadedAt: new Date().toISOString().slice(0, 10),
-        bg: selectedBg,
-      });
-
-      setCaption('');
-      setPreviewUrl(null);
-      setSelectedFile(null);
-      setShowForm(false);
+      resetForm();
     } catch (err) {
       setUploadError((err as Error).message);
     } finally {
       setUploading(false);
+      setUploadProgress('');
     }
   };
 
@@ -114,26 +139,59 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
           <form onSubmit={handleAdd} className="bg-blue-50 rounded-2xl p-4 mb-4 flex flex-col gap-3">
             <p className="text-sm font-semibold text-blue-900">{t('addPhoto')}</p>
 
-            {/* File upload */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full aspect-video rounded-xl border-2 border-dashed border-blue-200 bg-white flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/50 transition-colors overflow-hidden"
-            >
-              {previewUrl ? (
-                <img src={previewUrl} alt="preview" className="w-full h-full object-cover" />
-              ) : (
-                <>
-                  <svg className="w-7 h-7 text-blue-300 mb-1" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+            {/* Selected images preview grid */}
+            {previewUrls.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {previewUrls.map((url, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden">
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeSelected(idx)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                {/* Add more button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-square rounded-xl border-2 border-dashed border-blue-300 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                   </svg>
-                  <p className="text-xs text-blue-400">{t('tapChoosePhoto')}</p>
-                </>
-              )}
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                </button>
+              </div>
+            ) : (
+              /* Empty state — tap to pick */
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full aspect-video rounded-xl border-2 border-dashed border-blue-200 bg-white flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/50 transition-colors"
+              >
+                <svg className="w-7 h-7 text-blue-300 mb-1" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                </svg>
+                <p className="text-xs text-blue-400">{t('tapChoosePhoto')}</p>
+                <p className="text-[10px] text-blue-300 mt-0.5">{t('multipleAllowed')}</p>
+              </div>
+            )}
 
-            {/* Fallback emoji if no file */}
-            {!selectedFile && (
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            {/* Emoji fallback — only when no files selected */}
+            {selectedFiles.length === 0 && (
               <>
                 <p className="text-xs text-gray-500">{t('chooseEmoji')}</p>
                 <div className="flex flex-wrap gap-2">
@@ -167,9 +225,13 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
             <div className="flex gap-2">
               <button type="submit" disabled={uploading}
                 className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-60">
-                {uploading ? t('uploading') : t('add')}
+                {uploading
+                  ? `${t('uploading')} ${uploadProgress}`
+                  : selectedFiles.length > 1
+                    ? `${t('add')} ${selectedFiles.length} ${t('photos')}`
+                    : t('add')}
               </button>
-              <button type="button" onClick={() => { setShowForm(false); setPreviewUrl(null); setSelectedFile(null); }}
+              <button type="button" onClick={resetForm}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
                 {t('cancel')}
               </button>
@@ -178,7 +240,7 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
         )}
 
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          {trip.photos.length} photo{trip.photos.length !== 1 ? 's' : ''}
+          {trip.photos.length} {trip.photos.length !== 1 ? t('photos') : t('photo')}
         </p>
 
         <div className="grid grid-cols-2 gap-2">

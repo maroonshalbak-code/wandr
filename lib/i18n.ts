@@ -96,7 +96,9 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     statusNew: 'New',
     statusDone: 'Done',
     // Photos
-    tapChoosePhoto: 'Tap to choose a photo',
+    tapChoosePhoto: 'Tap to choose photos',
+    multipleAllowed: 'You can select multiple images',
+    photo: 'photo',
     chooseEmoji: 'Or choose an emoji instead',
     captionOptional: 'Caption (optional)',
     uploading: 'Uploading…',
@@ -217,7 +219,9 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     statusNew: 'جديدة',
     statusDone: 'مكتملة',
     // Photos
-    tapChoosePhoto: 'اضغط لاختيار صورة',
+    tapChoosePhoto: 'اضغط لاختيار صور',
+    multipleAllowed: 'يمكنك اختيار صور متعددة',
+    photo: 'صورة',
     chooseEmoji: 'أو اختر رمزاً بدلاً من ذلك',
     captionOptional: 'تعليق (اختياري)',
     uploading: 'جارٍ الرفع…',
@@ -338,7 +342,9 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     statusNew: 'חדשה',
     statusDone: 'הושלמה',
     // Photos
-    tapChoosePhoto: 'לחץ לבחירת תמונה',
+    tapChoosePhoto: 'לחץ לבחירת תמונות',
+    multipleAllowed: 'ניתן לבחור מספר תמונות',
+    photo: 'תמונה',
     chooseEmoji: 'או בחר אימוג\'י במקום',
     captionOptional: 'כיתוב (אופציונלי)',
     uploading: 'מעלה…',
