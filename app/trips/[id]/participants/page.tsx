@@ -17,6 +17,10 @@ function getInitials(name: string) {
 
 interface Profile { id: string; name: string; email: string }
 
+function buildInviteMessage(personName: string, organizerName: string, tripName: string, appUrl: string) {
+  return `Hi ${personName},\n\n${organizerName} has invited you to join the trip "${tripName}" on i-Travel.\n\nInstall the app here:\n${appUrl}\n\nSee you on the trip! ✈️`;
+}
+
 export default function ParticipantsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { getTrip, loading, addParticipant, removeParticipant } = useTrips();
@@ -35,9 +39,13 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
   // Invite mode
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
   const [inviting, setInviting] = useState(false);
 
-  const [inviteState, setInviteState] = useState<Record<string, 'sent'>>({});
+  // Per-participant invite state: undefined | 'email_sent' | 'whatsapp_sent'
+  const [inviteState, setInviteState] = useState<Record<string, string>>({});
+  // Which participant's invite popover is open
+  const [openInviteMenu, setOpenInviteMenu] = useState<string | null>(null);
 
   if (loading) return (
     <MobileShell>
@@ -49,6 +57,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
   if (!trip) notFound();
 
   const existingEmails = new Set(trip.participants.map((p) => p.email?.toLowerCase()));
+  const organizer = trip.participants[0]?.name ?? 'Someone';
 
   const searchProfiles = async (q: string) => {
     if (q.trim().length < 2) { setResults([]); return; }
@@ -56,13 +65,10 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
     try {
       const supabase = createClient();
       const term = `%${q}%`;
-
-      // Two separate ilike queries, then merge & dedupe
       const [nameRes, emailRes] = await Promise.all([
         supabase.from('profiles').select('id, name, email').ilike('name', term).limit(10),
         supabase.from('profiles').select('id, name, email').ilike('email', term).limit(10),
       ]);
-
       const seen = new Set<string>();
       const merged: Profile[] = [];
       for (const p of [...(nameRes.data ?? []), ...(emailRes.data ?? [])]) {
@@ -94,8 +100,8 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
     setQuery(''); setResults([]); setShowForm(false);
   };
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Add participant then invite via chosen channel
+  const handleInviteVia = async (channel: 'email' | 'whatsapp') => {
     if (!inviteName.trim() || !inviteEmail.trim()) return;
     setInviting(true);
     const color = COLORS[trip.participants.length % COLORS.length];
@@ -106,32 +112,40 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
       color,
       role: 'member',
     });
-    // Open email invite
     const appUrl = window.location.origin;
-    const organizer = trip.participants[0]?.name ?? 'Someone';
-    const subject = encodeURIComponent(`You've been invited to join ${trip.name} on i-Travel`);
-    const body = encodeURIComponent(
-      `Hi ${inviteName.trim()},\n\n${organizer} has invited you to join the trip "${trip.name}" on i-Travel.\n\nInstall the app here:\n${appUrl}\n\nSee you on the trip! ✈️`
-    );
-    window.open(`mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`, '_blank');
-    setInviteName(''); setInviteEmail(''); setInviting(false); setShowForm(false);
+    const msg = buildInviteMessage(inviteName.trim(), organizer, trip.name, appUrl);
+    if (channel === 'email') {
+      const subject = encodeURIComponent(`You've been invited to join ${trip.name} on i-Travel`);
+      window.open(`mailto:${inviteEmail.trim()}?subject=${subject}&body=${encodeURIComponent(msg)}`, '_blank');
+    } else {
+      const phone = invitePhone.trim().replace(/\D/g, '');
+      const waUrl = phone
+        ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      window.open(waUrl, '_blank');
+    }
+    setInviteName(''); setInviteEmail(''); setInvitePhone('');
+    setInviting(false); setShowForm(false);
   };
 
-  const sendInvite = (p: { id: string; name: string; email: string }) => {
+  // Invite an existing participant via chosen channel
+  const sendInviteTo = (p: { id: string; name: string; email: string }, channel: 'email' | 'whatsapp') => {
     const appUrl = window.location.origin;
-    const organizer = trip.participants[0]?.name ?? 'Someone';
-    const subject = encodeURIComponent(`You've been invited to join ${trip.name} on i-Travel`);
-    const body = encodeURIComponent(
-      `Hi ${p.name},\n\n${organizer} has invited you to join the trip "${trip.name}" on i-Travel.\n\nInstall the app here:\n${appUrl}\n\nSee you on the trip! ✈️`
-    );
-    window.open(`mailto:${p.email}?subject=${subject}&body=${body}`, '_blank');
-    setInviteState((prev) => ({ ...prev, [p.id]: 'sent' }));
+    const msg = buildInviteMessage(p.name, organizer, trip.name, appUrl);
+    if (channel === 'email') {
+      const subject = encodeURIComponent(`You've been invited to join ${trip.name} on i-Travel`);
+      window.open(`mailto:${p.email}?subject=${subject}&body=${encodeURIComponent(msg)}`, '_blank');
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+    setInviteState((prev) => ({ ...prev, [p.id]: channel === 'email' ? 'email_sent' : 'whatsapp_sent' }));
+    setOpenInviteMenu(null);
   };
 
   const closeForm = () => {
     setShowForm(false); setMode('search');
     setQuery(''); setResults([]);
-    setInviteName(''); setInviteEmail('');
+    setInviteName(''); setInviteEmail(''); setInvitePhone('');
   };
 
   return (
@@ -150,23 +164,19 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
+      <div className="flex-1 overflow-y-auto px-4 pb-6" onClick={() => setOpenInviteMenu(null)}>
 
         {/* Add participant panel */}
         {showForm && (
           <div className="bg-blue-50 rounded-2xl p-4 mb-4">
             {/* Mode tabs */}
             <div className="flex bg-white rounded-xl p-1 mb-4 gap-1">
-              <button
-                onClick={() => setMode('search')}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${mode === 'search' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-              >
+              <button onClick={() => setMode('search')}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${mode === 'search' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
                 🔍 {t('searchUsers')}
               </button>
-              <button
-                onClick={() => setMode('invite')}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${mode === 'invite' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-              >
+              <button onClick={() => setMode('invite')}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${mode === 'invite' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
                 ✉️ {t('inviteNew')}
               </button>
             </div>
@@ -176,8 +186,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
               <div className="flex flex-col gap-3">
                 <input
                   type="text" value={query} onChange={(e) => handleQueryChange(e.target.value)}
-                  placeholder={t('searchPlaceholder')}
-                  autoFocus
+                  placeholder={t('searchPlaceholder')} autoFocus
                   className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                 />
                 {searching && (
@@ -194,11 +203,8 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
                 {results.length > 0 && (
                   <div className="bg-white rounded-xl border border-blue-100 divide-y divide-gray-50 overflow-hidden">
                     {results.map((profile) => (
-                      <button
-                        key={profile.id}
-                        onClick={() => addExistingUser(profile)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition-colors text-left"
-                      >
+                      <button key={profile.id} onClick={() => addExistingUser(profile)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition-colors text-left">
                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 flex-shrink-0">
                           {getInitials(profile.name)}
                         </div>
@@ -224,7 +230,7 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
 
             {/* Invite new user mode */}
             {mode === 'invite' && (
-              <form onSubmit={handleInvite} className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3">
                 <input
                   type="text" value={inviteName} onChange={(e) => setInviteName(e.target.value)}
                   placeholder={t('fullName')} required autoFocus
@@ -235,23 +241,44 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
                   placeholder="email@example.com" required
                   className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                 />
+                <input
+                  type="tel" value={invitePhone} onChange={(e) => setInvitePhone(e.target.value)}
+                  placeholder={t('phoneOptional')}
+                  className="w-full rounded-xl border border-blue-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                />
                 <p className="text-[11px] text-gray-400">{t('inviteHint')}</p>
+
+                {/* Invite channel buttons */}
                 <div className="flex gap-2">
-                  <button type="submit" disabled={inviting}
-                    className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-60">
-                    {inviting ? '…' : t('addAndInvite')}
+                  <button
+                    type="button"
+                    disabled={inviting || !inviteName.trim() || !inviteEmail.trim()}
+                    onClick={() => handleInviteVia('email')}
+                    className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    📧 {t('viaEmail')}
                   </button>
-                  <button type="button" onClick={closeForm}
-                    className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
-                    {t('cancel')}
+                  <button
+                    type="button"
+                    disabled={inviting || !inviteName.trim() || !inviteEmail.trim()}
+                    onClick={() => handleInviteVia('whatsapp')}
+                    className="flex-1 py-2.5 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    💬 {t('viaWhatsApp')}
                   </button>
                 </div>
-              </form>
+                <button type="button" onClick={closeForm}
+                  className="w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
+                  {t('cancel')}
+                </button>
+              </div>
             )}
           </div>
         )}
 
-        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">{trip.participants.length} people</p>
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          {trip.participants.length} {t('people').toLowerCase()}
+        </p>
 
         <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
           {trip.participants.map((p) => (
@@ -265,12 +292,42 @@ export default function ParticipantsPage({ params }: { params: Promise<{ id: str
                 <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${p.role === 'organizer' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
                   {p.role === 'organizer' ? t('organizer') : t('member')}
                 </span>
+
+                {/* Invite button with popover */}
                 {p.role !== 'organizer' && p.email && (
-                  <button onClick={() => sendInvite({ id: p.id, name: p.name, email: p.email! })}
-                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors ${inviteState[p.id] === 'sent' ? 'bg-green-100 text-green-700' : 'bg-orange-50 text-orange-500 hover:bg-orange-100'}`}>
-                    {inviteState[p.id] === 'sent' ? t('invited') : t('inviteAction')}
-                  </button>
+                  <div className="relative" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => setOpenInviteMenu(openInviteMenu === p.id ? null : p.id)}
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors ${
+                        inviteState[p.id] ? 'bg-green-100 text-green-700' : 'bg-orange-50 text-orange-500 hover:bg-orange-100'
+                      }`}
+                    >
+                      {inviteState[p.id] === 'email_sent' ? '📧 ' + t('invited')
+                        : inviteState[p.id] === 'whatsapp_sent' ? '💬 ' + t('invited')
+                        : t('inviteAction')}
+                    </button>
+
+                    {/* Popover */}
+                    {openInviteMenu === p.id && (
+                      <div className="absolute bottom-full mb-1 right-0 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-10 w-36">
+                        <button
+                          onClick={() => sendInviteTo({ id: p.id, name: p.name, email: p.email! }, 'email')}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-gray-700 hover:bg-blue-50 transition-colors"
+                        >
+                          📧 <span>{t('viaEmail')}</span>
+                        </button>
+                        <div className="h-px bg-gray-100" />
+                        <button
+                          onClick={() => sendInviteTo({ id: p.id, name: p.name, email: p.email! }, 'whatsapp')}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-gray-700 hover:bg-green-50 transition-colors"
+                        >
+                          💬 <span>{t('viaWhatsApp')}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
+
                 {p.role !== 'organizer' && (
                   <button onClick={() => removeParticipant(id, p.id)}
                     className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-gray-300 hover:text-red-400 transition-colors" aria-label="Remove">
