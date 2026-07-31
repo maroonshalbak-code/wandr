@@ -17,10 +17,11 @@ export async function POST(request: Request) {
     if (!tripId || !event) return NextResponse.json({ ok: true });
 
     // Service-role client bypasses RLS so we can read other users' subscriptions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    ) as any;
 
     // Get all participants of this trip (excluding the actor)
     const { data: participants } = await supabase
