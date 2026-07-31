@@ -36,6 +36,7 @@ export default function ProfilePage() {
   const [pushSupported, setPushSupported] = useState(false);
   const [pushPermission, setPushPermission] = useState<string>('loading');
   const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
 
   const handleLocaleChange = (l: SupportedLocale) => {
@@ -67,12 +68,21 @@ export default function ProfilePage() {
   const handleTogglePush = async () => {
     if (!isPushSupported()) return;
     setPushLoading(true);
+    setPushError(null);
     if (pushPermission === 'granted') {
       await unsubscribeFromPush();
       setPushPermission('default');
     } else {
       const result = await subscribeToPush();
-      setPushPermission(result === 'granted' ? 'granted' : Notification.permission);
+      if (result === 'granted') {
+        setPushPermission('granted');
+      } else if (result === 'denied') {
+        setPushPermission('denied');
+      } else {
+        // 'error' — subscription failed after permission was granted
+        setPushPermission(Notification.permission);
+        setPushError('Subscription failed. Check console for details.');
+      }
     }
     setPushLoading(false);
   };
@@ -181,6 +191,9 @@ export default function ProfilePage() {
 
             {pushPermission === 'denied' && (
               <p className="text-[11px] text-red-400 mb-2">{t('notificationsBlocked')}</p>
+            )}
+            {pushError && (
+              <p className="text-[11px] text-red-400 mb-2">{pushError}</p>
             )}
 
             {pushPermission === 'granted' && (

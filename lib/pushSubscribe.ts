@@ -51,7 +51,7 @@ export async function subscribeToPush(): Promise<'granted' | 'denied' | 'error'>
 
     return 'granted';
   } catch (err) {
-    console.error('[pushSubscribe]', err);
+    console.error('[pushSubscribe] error:', err instanceof Error ? err.message : err);
     return 'error';
   }
 }
