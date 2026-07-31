@@ -6,12 +6,36 @@ import BottomNav from '@/components/BottomNav';
 import { createClient } from '@/lib/supabase/client';
 import { useLang } from '@/context/LanguageContext';
 import { LOCALE_NAMES, LOCALE_FLAGS, SupportedLocale } from '@/lib/i18n';
+import {
+  isPushSupported,
+  getNotificationPermission,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from '@/lib/pushSubscribe';
 import type { User } from '@supabase/supabase-js';
+
+type NotifPrefs = {
+  new_trip: boolean;
+  new_task: boolean;
+  new_payment: boolean;
+  new_message: boolean;
+  new_plan: boolean;
+};
+
+const DEFAULT_PREFS: NotifPrefs = {
+  new_trip: true, new_task: true, new_payment: true,
+  new_message: true, new_plan: true,
+};
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [langSaved, setLangSaved] = useState(false);
   const { t, locale, setLocale } = useLang();
+
+  // Push notification state
+  const [pushPermission, setPushPermission] = useState<string>('loading');
+  const [pushLoading, setPushLoading] = useState(false);
+  const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
 
   const handleLocaleChange = (l: SupportedLocale) => {
     setLocale(l);
@@ -21,8 +45,47 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    supabase.auth.getSession().then(async ({ data }) => {
+      const u = data.session?.user ?? null;
+      setUser(u);
+      // Push permission status
+      setPushPermission(getNotificationPermission());
+      // Load saved preferences
+      if (u) {
+        const { data: p } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', u.id)
+          .maybeSingle();
+        if (p) setPrefs(p as NotifPrefs);
+      }
+    });
   }, []);
+
+  const handleTogglePush = async () => {
+    if (!isPushSupported()) return;
+    setPushLoading(true);
+    if (pushPermission === 'granted') {
+      await unsubscribeFromPush();
+      setPushPermission('default');
+    } else {
+      const result = await subscribeToPush();
+      setPushPermission(result === 'granted' ? 'granted' : Notification.permission);
+    }
+    setPushLoading(false);
+  };
+
+  const handlePrefToggle = async (key: keyof NotifPrefs) => {
+    const updated = { ...prefs, [key]: !prefs[key] };
+    setPrefs(updated);
+    const supabase = createClient();
+    if (user) {
+      await supabase.from('notification_preferences').upsert({
+        user_id: user.id,
+        ...updated,
+      });
+    }
+  };
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -95,6 +158,56 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+
+        {/* Push notifications */}
+        {isPushSupported() && (
+          <div className="w-full bg-white rounded-2xl border border-gray-100 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-gray-700">{t('notifications')}</p>
+              <button
+                onClick={handleTogglePush}
+                disabled={pushLoading || pushPermission === 'denied'}
+                className={`relative w-11 h-6 rounded-full transition-colors duration-200 disabled:opacity-50 ${
+                  pushPermission === 'granted' ? 'bg-blue-500' : 'bg-gray-200'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                  pushPermission === 'granted' ? 'translate-x-5' : 'translate-x-0.5'
+                }`} />
+              </button>
+            </div>
+
+            {pushPermission === 'denied' && (
+              <p className="text-[11px] text-red-400 mb-2">{t('notificationsBlocked')}</p>
+            )}
+
+            {pushPermission === 'granted' && (
+              <div className="flex flex-col gap-0 divide-y divide-gray-50">
+                {([
+                  ['new_trip',    '🧳', t('notifyNewTrip')],
+                  ['new_task',    '✅', t('notifyNewTask')],
+                  ['new_payment', '💳', t('notifyNewPayment')],
+                  ['new_message', '💬', t('notifyNewMessage')],
+                  ['new_plan',    '🗓️', t('notifyNewPlan')],
+                ] as [keyof NotifPrefs, string, string][]).map(([key, icon, label]) => (
+                  <div key={key} className="flex items-center justify-between py-2.5">
+                    <span className="text-sm text-gray-700">{icon} {label}</span>
+                    <button
+                      onClick={() => handlePrefToggle(key)}
+                      className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${
+                        prefs[key] ? 'bg-blue-500' : 'bg-gray-200'
+                      }`}
+                    >
+                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                        prefs[key] ? 'translate-x-4' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Sign out */}
         <button

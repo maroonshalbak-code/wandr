@@ -6,6 +6,8 @@ import MobileShell from '@/components/MobileShell';
 import BackButton from '@/components/BackButton';
 import { useTrips } from '@/context/TripsContext';
 import { useLang } from '@/context/LanguageContext';
+import { createClient } from '@/lib/supabase/client';
+import { notifyTrip } from '@/lib/notify';
 import { Plan } from '@/lib/types';
 
 const typeColors: Record<Plan['type'], string> = {
@@ -67,10 +69,10 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
   );
   if (!trip) notFound();
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    addPlan(id, {
+    await addPlan(id, {
       title: title.trim(),
       description: description.trim(),
       date,
@@ -80,6 +82,8 @@ export default function PlansPage({ params }: { params: Promise<{ id: string }> 
       type: planType,
       location: location.trim() || undefined,
     });
+    const { data: { user } } = await createClient().auth.getUser();
+    if (user) notifyTrip(id, 'new_plan', `New plan: ${title.trim()}`, trip.name, user.id);
     setTitle(''); setDescription(''); setTime(''); setEndTime(''); setEndDate(''); setLocation('');
     setShowForm(false);
   };

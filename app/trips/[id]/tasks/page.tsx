@@ -6,6 +6,8 @@ import MobileShell from '@/components/MobileShell';
 import BackButton from '@/components/BackButton';
 import { useTrips } from '@/context/TripsContext';
 import { useLang } from '@/context/LanguageContext';
+import { createClient } from '@/lib/supabase/client';
+import { notifyTrip } from '@/lib/notify';
 import { Task } from '@/lib/types';
 
 export default function TasksPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,6 +45,9 @@ export default function TasksPage({ params }: { params: Promise<{ id: string }> 
       assigneeId: assignee?.id,
       assigneeName: assignee?.name,
     });
+    // Notify trip members
+    const { data: { user } } = await createClient().auth.getUser();
+    if (user) notifyTrip(id, 'new_task', `New task: ${title.trim()}`, trip.name, user.id);
     setTitle(''); setDescription(''); setAssigneeId(''); setSaving(false); setShowForm(false);
   };
 

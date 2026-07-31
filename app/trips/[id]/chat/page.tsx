@@ -8,6 +8,7 @@ import { useTrips } from '@/context/TripsContext';
 import { useLang } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { fetchMessages, insertMessage } from '@/lib/db/trips';
+import { notifyTrip } from '@/lib/notify';
 import type { Message } from '@/lib/types';
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
@@ -69,6 +70,10 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     try {
       const msg = await insertMessage(id, trimmed);
       setMessages((prev) => [...prev, msg]);
+      if (currentUserId && trip) {
+        const sender = trip.participants.find(p => p.id === currentUserId)?.name ?? 'Someone';
+        notifyTrip(id, 'new_message', `${sender}: ${trimmed.slice(0, 60)}`, trip.name, currentUserId);
+      }
     } catch (err) {
       setSendError((err as Error).message);
       setText(trimmed); // restore so the user doesn't lose their message

@@ -127,6 +127,14 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     // General
     close: 'Close',
     delete: 'Delete',
+    // Notifications
+    notifications: 'Notifications',
+    notificationsBlocked: 'Blocked in browser — enable in Settings',
+    notifyNewTrip: 'Added to a trip',
+    notifyNewTask: 'New task added',
+    notifyNewPayment: 'New payment added',
+    notifyNewMessage: 'New chat message',
+    notifyNewPlan: 'New plan added',
     // Trip statuses
     statusPlanning: 'Planning',
     statusUpcoming: 'Upcoming',
@@ -253,6 +261,14 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     // General
     close: 'إغلاق',
     delete: 'حذف',
+    // Notifications
+    notifications: 'الإشعارات',
+    notificationsBlocked: 'محظور في المتصفح — فعّله من الإعدادات',
+    notifyNewTrip: 'تمت إضافتك إلى رحلة',
+    notifyNewTask: 'مهمة جديدة',
+    notifyNewPayment: 'دفعة جديدة',
+    notifyNewMessage: 'رسالة جديدة',
+    notifyNewPlan: 'خطة جديدة',
     // Trip statuses
     statusPlanning: 'تخطيط',
     statusUpcoming: 'قادمة',
@@ -379,6 +395,14 @@ const t: Record<SupportedLocale, Record<string, string>> = {
     // General
     close: 'סגור',
     delete: 'מחק',
+    // Notifications
+    notifications: 'התראות',
+    notificationsBlocked: 'חסום בדפדפן — אפשר בהגדרות',
+    notifyNewTrip: 'נוספת לטיול',
+    notifyNewTask: 'משימה חדשה',
+    notifyNewPayment: 'תשלום חדש',
+    notifyNewMessage: 'הודעה חדשה',
+    notifyNewPlan: 'תוכנית חדשה',
     // Trip statuses
     statusPlanning: 'תכנון',
     statusUpcoming: 'קרוב',

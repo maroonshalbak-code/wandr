@@ -6,6 +6,8 @@ import MobileShell from '@/components/MobileShell';
 import BackButton from '@/components/BackButton';
 import { useTrips } from '@/context/TripsContext';
 import { useLang } from '@/context/LanguageContext';
+import { createClient } from '@/lib/supabase/client';
+import { notifyTrip } from '@/lib/notify';
 
 export default function PaymentsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -64,6 +66,8 @@ export default function PaymentsPage({ params }: { params: Promise<{ id: string 
         paidById: payer?.id,
         paidByName: payer?.name,
       }, selectedFile ?? undefined);
+      const { data: { user } } = await createClient().auth.getUser();
+      if (user) notifyTrip(id, 'new_payment', `New payment: ${name.trim()}`, `${cost} — ${trip.name}`, user.id);
       resetForm();
     } catch (err) {
       setSaveError((err as Error).message);
