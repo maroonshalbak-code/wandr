@@ -42,14 +42,18 @@ export default function SignupPage() {
     }
 
     const fakeEmail = `${clean}@itravel.app`;
-    const { error: authError } = await supabase.auth.signUp({
+    const { data: signUpData, error: authError } = await supabase.auth.signUp({
       email: fakeEmail,
       password,
       options: { data: { name: username.trim(), username: clean } },
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(typeof authError.message === 'string' ? authError.message : JSON.stringify(authError));
+      setLoading(false);
+    } else if (signUpData.user && !signUpData.session) {
+      // Email confirmation is still enabled in Supabase — prompt user to disable it
+      setError('Account created but email confirmation is required. Please disable "Confirm email" in Supabase Auth settings.');
       setLoading(false);
     } else {
       window.location.href = '/';
