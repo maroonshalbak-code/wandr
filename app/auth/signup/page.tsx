@@ -49,7 +49,7 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError(typeof authError.message === 'string' ? authError.message : JSON.stringify(authError));
+      setError(authError.message || String(authError) || 'Signup failed. Please try again.');
       setLoading(false);
     } else if (signUpData.user && !signUpData.session) {
       // Email confirmation is still enabled in Supabase — prompt user to disable it
