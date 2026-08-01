@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,9 +15,21 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError(error.message);
+
+    // Look up the email associated with this username
+    const { data: email, error: rpcError } = await supabase.rpc('get_email_by_username', {
+      p_username: username.trim().toLowerCase(),
+    });
+
+    if (rpcError || !email) {
+      setError('Username not found.');
+      setLoading(false);
+      return;
+    }
+
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) {
+      setError('Incorrect password.');
       setLoading(false);
     } else {
       window.location.href = '/';
@@ -35,15 +47,16 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Username</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="your_username"
               className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
               required
-              autoComplete="email"
+              autoComplete="username"
+              autoCapitalize="none"
             />
           </div>
           <div>

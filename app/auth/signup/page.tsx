@@ -5,47 +5,56 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    if (clean.length < 2) {
+      setError('Username must be at least 2 characters.');
+      return;
+    }
+
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
+
+    // Check if username is already taken
+    const { data: existing } = await supabase.rpc('get_email_by_username', { p_username: clean });
+    if (existing) {
+      setError('Username already taken.');
+      setLoading(false);
+      return;
+    }
+
+    const fakeEmail = `${clean}@itravel.app`;
+    const { error: authError } = await supabase.auth.signUp({
+      email: fakeEmail,
       password,
-      options: { data: { name } },
+      options: { data: { name: username.trim(), username: clean } },
     });
-    if (error) {
-      setError(error.message);
+
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
     } else {
-      setSent(true);
+      window.location.href = '/';
     }
   };
-
-  if (sent) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl p-8 text-center">
-          <span className="text-5xl">📬</span>
-          <h2 className="text-xl font-bold text-gray-900 mt-4">Check your email</h2>
-          <p className="text-gray-400 text-sm mt-2">
-            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
-          </p>
-          <Link href="/auth/login" className="block mt-6 text-blue-500 text-sm font-medium hover:underline">
-            Back to login
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
@@ -58,27 +67,16 @@ export default function SignupPage() {
 
         <form onSubmit={handleSignup} className="flex flex-col gap-4">
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Your name</label>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Username</label>
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Maroon"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="your_username"
               className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
               required
-              autoComplete="name"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              required
-              autoComplete="email"
+              autoComplete="username"
+              autoCapitalize="none"
             />
           </div>
           <div>
@@ -89,6 +87,18 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 6 characters"
               minLength={6}
+              className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              required
+              autoComplete="new-password"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Confirm password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
               className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
               required
               autoComplete="new-password"
